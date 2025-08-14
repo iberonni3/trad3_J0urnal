@@ -9,6 +9,10 @@ import { TopNavigation } from "@/components/layout/TopNavigation";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import Trades from "./pages/Trades";
+import Analytics from "./pages/Analytics";
+import Calendar from "./pages/Calendar";
+import Journal from "./pages/Journal";
+import Import from "./pages/Import";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,10 +42,10 @@ const App = () => (
           <Route path="/" element={<AuthPage />} />
           <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
           <Route path="/trades" element={<AppLayout><Trades /></AppLayout>} />
-          <Route path="/analytics" element={<AppLayout><div className="p-6"><h1 className="text-3xl font-bold">Analytics</h1><p className="text-muted-foreground">Coming soon...</p></div></AppLayout>} />
-          <Route path="/calendar" element={<AppLayout><div className="p-6"><h1 className="text-3xl font-bold">Calendar</h1><p className="text-muted-foreground">Coming soon...</p></div></AppLayout>} />
-          <Route path="/journal" element={<AppLayout><div className="p-6"><h1 className="text-3xl font-bold">Journal</h1><p className="text-muted-foreground">Coming soon...</p></div></AppLayout>} />
-          <Route path="/import" element={<AppLayout><div className="p-6"><h1 className="text-3xl font-bold">Import</h1><p className="text-muted-foreground">Coming soon...</p></div></AppLayout>} />
+          <Route path="/analytics" element={<AppLayout><Analytics /></AppLayout>} />
+          <Route path="/calendar" element={<AppLayout><Calendar /></AppLayout>} />
+          <Route path="/journal" element={<AppLayout><Journal /></AppLayout>} />
+          <Route path="/import" element={<AppLayout><Import /></AppLayout>} />
           <Route path="/accounts" element={<AppLayout><div className="p-6"><h1 className="text-3xl font-bold">Accounts</h1><p className="text-muted-foreground">Coming soon...</p></div></AppLayout>} />
           <Route path="/strategies" element={<AppLayout><div className="p-6"><h1 className="text-3xl font-bold">Strategies</h1><p className="text-muted-foreground">Coming soon...</p></div></AppLayout>} />
           <Route path="/settings" element={<AppLayout><div className="p-6"><h1 className="text-3xl font-bold">Settings</h1><p className="text-muted-foreground">Coming soon...</p></div></AppLayout>} />
