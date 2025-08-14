@@ -1,19 +1,18 @@
-import { useState } from 'react';
-import { LoginForm } from '@/components/auth/LoginForm';
-import { SignUpForm } from '@/components/auth/SignUpForm';
+// src/pages/AuthPage.tsx
+import React, { useState } from "react";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { SignUpForm } from "@/components/auth/SignUpForm";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
 
-  const toggleForm = () => setIsLogin(!isLogin);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-white via-purple-200 to-purple-900">
+      <div className="w-full max-w-md">
         {isLogin ? (
-          <LoginForm onToggleForm={toggleForm} />
+          <LoginForm onToggleForm={() => setIsLogin(false)} />
         ) : (
-          <SignUpForm onToggleForm={toggleForm} />
+          <SignUpForm onToggleForm={() => setIsLogin(true)} />
         )}
       </div>
     </div>

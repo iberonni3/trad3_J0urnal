@@ -1,27 +1,51 @@
-import { Bell, Search, User, Moon, Sun } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
+import { useEffect, useState } from "react";
+import { Bell, User, Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { getAuth, onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 export function TopNavigation() {
+  const navigate = useNavigate();
+  const auth = getAuth();
+
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, [auth]);
+
+  const handleLogout = () => {
+    signOut(auth)
+      .then(() => {
+        navigate("/login");
+      })
+      .catch((error) => {
+        console.error("Logout error:", error);
+      });
+  };
+
   return (
     <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="flex h-full items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="p-2" />
-          
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search trades, symbols, or notes..."
               className="pl-10 w-80 bg-muted/50 border-muted"
@@ -30,12 +54,10 @@ export function TopNavigation() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Live P&L Indicator */}
+          {/* Live P&L */}
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-success-light border border-success/20">
             <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-            <span className="text-sm font-medium text-success">
-              +$2,456.78
-            </span>
+            <span className="text-sm font-medium text-success">+$2,456.78</span>
           </div>
 
           {/* Theme Toggle */}
@@ -56,20 +78,22 @@ export function TopNavigation() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-9 px-2">
+              <Button variant="ghost" className="h-9 px-2 flex items-center">
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    JD
+                    {user?.displayName?.[0] || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden sm:block ml-2 font-medium">John Doe</span>
+                <span className="hidden sm:block ml-2 font-medium">
+                  {user?.displayName || "User"}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-xs text-muted-foreground">john@example.com</p>
+                  <p className="text-sm font-medium">{user?.displayName || "User"}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -82,7 +106,10 @@ export function TopNavigation() {
                 Notifications
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
+              <DropdownMenuItem
+                className="text-red-600 cursor-pointer"
+                onClick={handleLogout}
+              >
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>

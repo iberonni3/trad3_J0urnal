@@ -107,7 +107,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md trading-card">
+    <Card className="w-full max-w-md trading-card scale-90 transform">
       <CardHeader className="space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <div className="p-2 rounded-lg hero-gradient">
@@ -119,7 +119,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
           Create your trading account to get started
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
