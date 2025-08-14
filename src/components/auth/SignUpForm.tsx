@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, TrendingUp, Mail } from 'lucide-react';
+import { signUpWithEmail, loginWithGoogle } from '@/lib/firebase/auth';
+import { toast } from '@/components/ui/use-toast';
 
 interface SignUpFormProps {
   onToggleForm: () => void;
@@ -23,35 +26,84 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
       return;
     }
+    
     if (!acceptTerms) {
-      alert('Please accept the terms and conditions');
+      toast({
+        title: 'Error',
+        description: 'Please accept the terms and conditions',
+        variant: 'destructive',
+      });
       return;
     }
     
     setIsLoading(true);
     
-    // TODO: Implement Firebase authentication
-    setTimeout(() => {
+    try {
+      await signUpWithEmail(formData.email, formData.password);
+      
+      toast({
+        title: 'Verification Email Sent!',
+        description: 'Please check your inbox and verify your email to continue.',
+        duration: 10000, // Longer duration for important message
+      });
+      
+      navigate('/verify-email-instructions', {
+        state: { email: formData.email } // Pass email for potential resend
+      });
+      
+    } catch (error) {
+      let errorMessage = 'Signup failed. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Try signing in.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password should be at least 6 characters';
+      }
+      
+      toast({
+        title: 'Signup Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
       setIsLoading(false);
-      // Temporary: redirect to dashboard for demo
-      window.location.href = '/dashboard';
-    }, 1000);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setIsLoading(true);
+    try {
+      await loginWithGoogle();
+      toast({
+        title: 'Signup Successful!',
+        description: 'Welcome to your trading journal!',
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: 'Google Signup Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleGoogleSignUp = () => {
-    // TODO: Implement Google sign-up
-    console.log('Google sign-up clicked');
   };
 
   return (
@@ -108,7 +160,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Password (min 6 characters)</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -117,6 +169,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 required
+                minLength={6}
                 className="h-11 pr-10"
               />
               <Button
@@ -145,6 +198,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                 required
+                minLength={6}
                 className="h-11 pr-10"
               />
               <Button
@@ -180,7 +234,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
           <Button 
             type="submit" 
             className="w-full h-11 trading-gradient text-white font-medium"
-            disabled={isLoading}
+            disabled={isLoading || !acceptTerms}
           >
             {isLoading ? 'Creating account...' : 'Create Account'}
           </Button>
@@ -201,6 +255,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
             variant="outline"
             className="w-full h-11"
             onClick={handleGoogleSignUp}
+            disabled={isLoading}
           >
             <Mail className="mr-2 h-4 w-4" />
             Google
@@ -213,6 +268,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
             variant="link"
             className="p-0 h-auto font-medium text-primary"
             onClick={onToggleForm}
+            disabled={isLoading}
           >
             Sign in
           </Button>

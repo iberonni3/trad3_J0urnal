@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, TrendingUp, Mail } from 'lucide-react';
+import { loginWithEmail, loginWithGoogle } from '@/lib/firebase/auth';
+import { toast } from '@/components/ui/use-toast';
 
 interface LoginFormProps {
   onToggleForm: () => void;
@@ -15,22 +18,48 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // TODO: Implement Firebase authentication
-    setTimeout(() => {
+    try {
+      await loginWithEmail(email, password);
+      toast({
+        title: 'Login successful',
+        description: 'Welcome back to your trading journal!',
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: 'Login failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
       setIsLoading(false);
-      // Temporary: redirect to dashboard for demo
-      window.location.href = '/dashboard';
-    }, 1000);
+    }
   };
 
-  const handleGoogleSignIn = () => {
-    // TODO: Implement Google sign-in
-    console.log('Google sign-in clicked');
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await loginWithGoogle();
+      toast({
+        title: 'Google login successful',
+        description: 'Welcome to your trading journal!',
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: 'Google login failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -113,6 +142,7 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
             variant="outline"
             className="w-full h-11"
             onClick={handleGoogleSignIn}
+            disabled={isLoading}
           >
             <Mail className="mr-2 h-4 w-4" />
             Google
@@ -125,6 +155,7 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
             variant="link"
             className="p-0 h-auto font-medium text-primary"
             onClick={onToggleForm}
+            disabled={isLoading}
           >
             Sign up
           </Button>
@@ -133,3 +164,5 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
     </Card>
   );
 }
+
+export default LoginForm;
