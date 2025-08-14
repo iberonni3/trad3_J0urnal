@@ -1,26 +1,35 @@
-// components/auth/ProtectedRoute.tsx
-import { ReactNode, useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { Navigate } from "react-router-dom";
+// src/components/auth/ProtectedRoute.tsx
+import { useEffect, useState } from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
-
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const [user, setUser] = useState<FirebaseUser | null | undefined>(undefined);
+export const ProtectedRoute = () => {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const auth = getAuth();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [auth]);
 
-  if (user === undefined) return null; // or a spinner
+  if (loading) {
+    // You can replace this with a fancy spinner if you want
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background dark:bg-background-dark">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    // Not logged in, redirect to AuthPage
+    return <Navigate to="/" replace />;
+  }
 
-  return <>{children}</>;
+  // Logged in, render the protected content
+  return <Outlet />;
 };

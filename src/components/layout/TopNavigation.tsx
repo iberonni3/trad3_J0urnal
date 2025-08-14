@@ -19,7 +19,6 @@ import { useNavigate } from "react-router-dom";
 export function TopNavigation() {
   const navigate = useNavigate();
   const auth = getAuth();
-
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
   // Listen for auth state changes
@@ -30,14 +29,13 @@ export function TopNavigation() {
     return () => unsubscribe();
   }, [auth]);
 
-  const handleLogout = () => {
-    signOut(auth)
-      .then(() => {
-        navigate("/login");
-      })
-      .catch((error) => {
-        console.error("Logout error:", error);
-      });
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/"); // redirect to AuthPage
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
@@ -78,17 +76,18 @@ export function TopNavigation() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-9 px-2 flex items-center">
+              <Button variant="ghost" className="h-9 px-2 flex items-center gap-2">
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                     {user?.displayName?.[0] || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden sm:block ml-2 font-medium">
-                  {user?.displayName || "User"}
+                <span className="hidden sm:block font-medium">
+                  {user?.displayName || user?.email || "User"}
                 </span>
               </Button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
@@ -96,7 +95,9 @@ export function TopNavigation() {
                   <p className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</p>
                 </div>
               </DropdownMenuLabel>
+
               <DropdownMenuSeparator />
+
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 Profile Settings
@@ -105,7 +106,9 @@ export function TopNavigation() {
                 <Bell className="mr-2 h-4 w-4" />
                 Notifications
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
+
               <DropdownMenuItem
                 className="text-red-600 cursor-pointer"
                 onClick={handleLogout}

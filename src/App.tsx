@@ -17,7 +17,6 @@ import Import from "./pages/Import";
 import NotFound from "./pages/NotFound";
 import { VerifyEmail } from '@/pages/VerifyEmail';
 import { VerifyEmailInstructions } from '@/pages/VerifyEmailInstructions';
-import LoginForm from "./components/auth/LoginForm";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -51,106 +50,41 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Login Page */}
-          <Route
-           path="/login" element={<AuthPage />} 
-            
-          />
-
           {/* Public Auth Page */}
           <Route element={<StandaloneLayout />}>
             <Route path="/" element={<AuthPage />} />
-          </Route>
-
-          {/* Email Verification Pages */}
-          <Route element={<StandaloneLayout />}>
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/verify-email-instructions" element={<VerifyEmailInstructions />} />
           </Route>
 
           {/* Protected Dashboard Pages */}
-          <Route element={<AppLayout />}>
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/trades"
-              element={
-                <ProtectedRoute>
-                  <Trades />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute>
-                  <Analytics />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/calendar"
-              element={
-                <ProtectedRoute>
-                  <Calendar />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/journal"
-              element={
-                <ProtectedRoute>
-                  <Journal />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/import"
-              element={
-                <ProtectedRoute>
-                  <Import />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/accounts"
-              element={
-                <ProtectedRoute>
-                  <div className="p-6">
-                    <h1 className="text-3xl font-bold">Accounts</h1>
-                    <p className="text-muted-foreground">Coming soon...</p>
-                  </div>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/strategies"
-              element={
-                <ProtectedRoute>
-                  <div className="p-6">
-                    <h1 className="text-3xl font-bold">Strategies</h1>
-                    <p className="text-muted-foreground">Coming soon...</p>
-                  </div>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <div className="p-6">
-                    <h1 className="text-3xl font-bold">Settings</h1>
-                    <p className="text-muted-foreground">Coming soon...</p>
-                  </div>
-                </ProtectedRoute>
-              }
-            />
+          <Route element={<ProtectedRoute children={""} />}>
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/trades" element={<Trades />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/journal" element={<Journal />} />
+              <Route path="/import" element={<Import />} />
+              <Route path="/accounts" element={
+                <div className="p-6">
+                  <h1 className="text-3xl font-bold">Accounts</h1>
+                  <p className="text-muted-foreground">Coming soon...</p>
+                </div>
+              } />
+              <Route path="/strategies" element={
+                <div className="p-6">
+                  <h1 className="text-3xl font-bold">Strategies</h1>
+                  <p className="text-muted-foreground">Coming soon...</p>
+                </div>
+              } />
+              <Route path="/settings" element={
+                <div className="p-6">
+                  <h1 className="text-3xl font-bold">Settings</h1>
+                  <p className="text-muted-foreground">Coming soon...</p>
+                </div>
+              } />
+            </Route>
           </Route>
 
           {/* Catch-all */}
