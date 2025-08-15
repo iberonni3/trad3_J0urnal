@@ -11,6 +11,17 @@ import {
 import { StatCard } from '@/components/dashboard/StatCard';
 import { EquityCurve } from '@/components/dashboard/EquityCurve';
 import { RecentTrades } from '@/components/dashboard/RecentTrades';
+import { TradingCalendarHeatmap } from '@/components/dashboard/TradingCalendarHeatmap';
+
+// Example dummy data for heatmap
+const dummyCalendarData = [
+  { date: "2025-08-01", profitLoss: 120 },
+  { date: "2025-08-02", profitLoss: -50 },
+  { date: "2025-08-03", profitLoss: 300 },
+  { date: "2025-08-04", profitLoss: 0 },
+  { date: "2025-08-05", profitLoss: 200 },
+  // Add more as needed
+];
 
 export default function Dashboard() {
   return (
@@ -101,19 +112,13 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts and Tables */}
+      {/* Charts and Calendar Heatmap */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:col-span-1">
           <EquityCurve />
         </div>
         <div className="lg:col-span-1">
-          {/* Placeholder for Calendar Heatmap */}
-          <div className="h-80 trading-card p-6 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold">Trading Calendar</h3>
-              <p className="text-muted-foreground">Calendar heatmap coming soon...</p>
-            </div>
-          </div>
+          <TradingCalendarHeatmap data={dummyCalendarData} />
         </div>
       </div>
 
