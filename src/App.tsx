@@ -58,7 +58,7 @@ const App = () => (
           </Route>
 
           {/* Protected Dashboard Pages */}
-          <Route element={<ProtectedRoute children={""} />}>
+          <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/trades" element={<Trades />} />
