@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowUpRight, ArrowDownRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 // Sample trades data
 const recentTrades = [
@@ -77,6 +78,12 @@ const recentTrades = [
 ];
 
 export function RecentTrades() {
+  const navigate = useNavigate();
+
+  const handleViewAllClick = () => {
+    navigate('/trades');
+  };
+
   const formatPnL = (pnl: number) => {
     if (pnl === 0) return '$0.00';
     const sign = pnl > 0 ? '+' : '';
@@ -123,7 +130,7 @@ export function RecentTrades() {
             Your latest trading activity and performance
           </CardDescription>
         </div>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={handleViewAllClick}>
           <ExternalLink className="h-4 w-4 mr-2" />
           View All
         </Button>

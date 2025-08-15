@@ -133,9 +133,8 @@ export default function Dashboard() {
         </div>
         <div className="lg:col-span-1">
           <div className="bg-card rounded-lg border p-4 h-full flex flex-col">
-            <h3 className="text-lg font-semibold mb-2">Trading Activity</h3>
             <div className="flex-1 min-h-[180px]">
-              <TradingCalendarHeatmap data={dummyCalendarData} containerHeight={0} />
+              <TradingCalendarHeatmap data={dummyCalendarData} />
             </div>
             <div className="flex justify-center mt-3 space-x-4 text-xs text-muted-foreground">
               <div className="flex items-center">
