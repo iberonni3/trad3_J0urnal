@@ -24,12 +24,14 @@ const queryClient = new QueryClient();
 // Dashboard Layout
 const AppLayout = () => (
   <SidebarProvider>
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full bg-background">
       <AppSidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <TopNavigation />
-        <main className="flex-1 overflow-auto p-4">
-          <Outlet />
+        <main className="flex-1 overflow-auto mobile-container section-padding">
+          <div className="content-spacing max-w-7xl mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

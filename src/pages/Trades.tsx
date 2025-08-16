@@ -312,30 +312,30 @@ export default function Trades() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="content-spacing">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Trades</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Trades</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Manage and analyze all your trading positions
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={exportToCSV}>
+        <div className="responsive-flex gap-3">
+          <Button variant="outline" onClick={exportToCSV} className="mobile-hidden">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
           
           <Dialog open={isAddTradeOpen} onOpenChange={setIsAddTradeOpen}>
             <DialogTrigger asChild>
-              <Button className="trading-gradient text-white">
+              <Button className="trading-gradient text-white touch-friendly">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Trade
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="mobile-modal-content max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add New Trade</DialogTitle>
                 <DialogDescription>
@@ -343,7 +343,7 @@ export default function Trades() {
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              <div className="form-grid gap-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="symbol">Symbol</Label>
                   <Input
@@ -558,8 +558,8 @@ export default function Trades() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="responsive-table-container">
+            <Table className="responsive-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Symbol</TableHead>

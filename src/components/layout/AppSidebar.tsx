@@ -72,7 +72,7 @@ export function AppSidebar() {
   return (
     <Sidebar className={isCollapsed ? 'w-16' : 'w-64'} collapsible="icon">
       {/* Top Logo/Header */}
-      <SidebarHeader className="border-b border-sidebar-border p-4 flex items-center justify-center">
+      <SidebarHeader className="border-b border-sidebar-border p-3 sm:p-4 flex items-center justify-center">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg hero-gradient flex-shrink-0">
             <TrendingUp className="h-5 w-5 text-white" />
@@ -181,15 +181,15 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Footer with Firebase User */}
-      <SidebarFooter className="border-t border-sidebar-border p-4 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
+      <SidebarFooter className="border-t border-sidebar-border p-3 sm:p-4 flex items-center justify-center">
+        <div className="flex items-center gap-3 w-full">
+          <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
               {user?.displayName?.[0] || 'U'}
             </AvatarFallback>
           </Avatar>
           {!isCollapsed && (
-            <div className="flex-1 min-w-0 pr-2">
+            <div className="flex-1 min-w-0">
               <div className="font-medium text-sm text-sidebar-foreground truncate">
                 {user?.displayName || 'User'}
               </div>

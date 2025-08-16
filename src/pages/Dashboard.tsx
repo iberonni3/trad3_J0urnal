@@ -45,17 +45,17 @@ export default function Dashboard() {
   const dummyCalendarData = generateDummyCalendarData();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="content-spacing">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Trading Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Trading Dashboard</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">
           Welcome back! Here's an overview of your trading performance.
         </p>
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="responsive-grid">
         <StatCard
           title="Total Trades"
           value="85"
@@ -91,7 +91,7 @@ export default function Dashboard() {
       </div>
 
       {/* Secondary Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="responsive-grid">
         <StatCard
           title="Expectancy"
           value="$28.91"
@@ -127,16 +127,16 @@ export default function Dashboard() {
       </div>
 
       {/* Charts and Calendar Heatmap */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <div className="lg:col-span-1">
           <EquityCurve />
         </div>
         <div className="lg:col-span-1">
-          <div className="bg-card rounded-lg border p-4 h-full flex flex-col">
-            <div className="flex-1 min-h-[180px]">
+          <div className="trading-card section-padding flex flex-col">
+            <div className="flex-1 min-h-[160px] sm:min-h-[180px]">
               <TradingCalendarHeatmap data={dummyCalendarData} />
             </div>
-            <div className="flex justify-center mt-3 space-x-4 text-xs text-muted-foreground">
+            <div className="flex justify-center flex-wrap gap-2 sm:gap-4 mt-3 text-xs text-muted-foreground">
               <div className="flex items-center">
                 <span className="inline-block w-3 h-3 bg-green-500 mr-1 rounded-sm"></span>
                 Profitable

@@ -194,50 +194,39 @@ export default function TradingCalendar() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
+    <div className="min-h-screen bg-background text-foreground relative mobile-container">
       {/* Header */}
-      <div className="bg-card px-6 py-4 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigateMonth('prev')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground text-sm">
-              TODAY
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigateMonth('next')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <h1 className="text-lg font-medium ml-4">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h1>
-          </div>
+      <div className="trading-card section-padding border-b">
+        <div className="flex flex-col space-y-4">
+          {/* Navigation Row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="sm" onClick={() => navigateMonth('prev')} className="touch-friendly">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-sm touch-friendly mobile-hidden">
+                TODAY
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => navigateMonth('next')} className="touch-friendly">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <h1 className="text-base sm:text-lg font-medium">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h1>
+            </div>
 
-          {/* Monthly Stats and Controls */}
-          <div className="flex items-center gap-4">
-            <span className="text-muted-foreground text-sm">Monthly stats:</span>
-            <div className="bg-success/20 border border-success/30 rounded-full px-3 py-1">
-              <span className="text-success-foreground font-medium text-sm">
-                ${totalPnL.toLocaleString()}
-              </span>
-            </div>
-            <div className="bg-primary/20 border border-primary/30 rounded-full px-3 py-1">
-              <span className="text-primary-foreground font-medium text-sm">
-                {tradingDays} days
-              </span>
-            </div>
             <div className="relative" ref={dropdownRef}>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowDisplayOptions(!showDisplayOptions)}
                 aria-label="Settings"
+                className="touch-friendly"
               >
                 <Settings className="h-4 w-4" />
               </Button>
               {showDisplayOptions && (
                 <div className="absolute right-0 top-full mt-2 bg-card border rounded-lg p-3 z-20 min-w-56 shadow-lg">
-
                   <div className="text-sm font-medium mb-3">Display stats</div>
                   {displayModes.map((mode) => (
                     <div 
@@ -265,23 +254,41 @@ export default function TradingCalendar() {
               )}
             </div>
           </div>
+
+          {/* Monthly Stats Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-muted-foreground text-sm mobile-hidden">Monthly stats:</span>
+            <div className="responsive-flex gap-2 sm:gap-4">
+              <div className="bg-success/20 border border-success/30 rounded-full px-3 py-1">
+                <span className="text-success-foreground font-medium text-sm">
+                  ${totalPnL.toLocaleString()}
+                </span>
+              </div>
+              <div className="bg-primary/20 border border-primary/30 rounded-full px-3 py-1">
+                <span className="text-primary-foreground font-medium text-sm">
+                  {tradingDays} days
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex flex-col lg:flex-row">
         {/* Main Calendar */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 section-padding">
           <div className="grid grid-cols-7 gap-1">
             {/* Day headers */}
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center text-sm font-medium text-muted-foreground py-3">
-                {day}
+              <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-2 sm:py-3">
+                <span className="mobile-hidden">{day}</span>
+                <span className="mobile-only">{day.charAt(0)}</span>
               </div>
             ))}
 
             {/* Empty cells for days before month starts */}
             {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-              <div key={`empty-${index}`} className="h-20" />
+              <div key={`empty-${index}`} className="h-16 sm:h-20" />
             ))}
 
             {/* Days of the month */}
@@ -295,7 +302,7 @@ export default function TradingCalendar() {
                 <div
                   key={day}
                   className={cn(
-                    'h-20 p-2 border cursor-pointer transition-all duration-200 relative flex flex-col justify-between',
+                    'h-16 sm:h-20 p-1 sm:p-2 border cursor-pointer transition-all duration-200 relative flex flex-col justify-between',
                     getDayColor(data),
                     isSelected && 'ring-2 ring-primary',
                     !data && 'hover:bg-muted/50'
@@ -303,21 +310,21 @@ export default function TradingCalendar() {
                   onClick={() => setSelectedDate(dateStr)}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="text-sm font-medium">{day}</span>
+                    <span className="text-xs sm:text-sm font-medium">{day}</span>
                     {data && (
-                      <BookOpen className="h-3 w-3 opacity-60" />
+                      <BookOpen className="h-2 w-2 sm:h-3 sm:w-3 opacity-60" />
                     )}
                   </div>
                   
                   {data && (
                     <div className="text-center">
-                      <div className="font-bold text-sm mb-0.5">
+                      <div className="font-bold text-xs sm:text-sm mb-0.5">
                         {formatDisplayValue(data, displayMode)}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mobile-hidden">
                         {data.trades} trade{data.trades !== 1 ? 's' : ''}
                       </div>
-                      <div className="text-xs text-muted-foreground/60">
+                      <div className="text-xs text-muted-foreground/60 mobile-hidden">
                         {displayMode !== 'rMultiple' && `${data.rMultiple}R, `}{data.winRate.toFixed(0)}%
                       </div>
                     </div>
@@ -329,7 +336,7 @@ export default function TradingCalendar() {
         </div>
 
         {/* Weekly Summary Sidebar */}
-        <div className="w-80 p-6 space-y-4">
+        <div className="w-full lg:w-80 section-padding lg:border-l border-border space-y-4">
           {weeklyStats.map((stats, index) => (
             <div key={index} className="bg-card border rounded-lg p-4">
               <div className="text-sm text-muted-foreground mb-2">Week {stats.weekNumber}</div>

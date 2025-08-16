@@ -160,6 +160,44 @@
 }
 
 @layer components {
+  /* Global Scrollbar Styles - Matching Sidebar Design */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)/0.3) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary)/0.3);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary)/0.5);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Scrollbar for dark backgrounds */
+  .dark *::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary)/0.25);
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary)/0.4);
+  }
+
   /* Trading-specific utilities */
   .profit {
     @apply text-success;
@@ -199,5 +237,80 @@
   
   .nav-item-inactive {
     @apply nav-item text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground;
+  }
+
+  /* Responsive Utilities */
+  .mobile-container {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+  }
+
+  .responsive-flex {
+    @apply flex flex-col sm:flex-row gap-4 sm:gap-6;
+  }
+
+  .mobile-hidden {
+    @apply hidden sm:block;
+  }
+
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+
+  .touch-friendly {
+    @apply min-h-[44px] min-w-[44px] p-3;
+  }
+
+  /* Mobile-first stat cards */
+  .mobile-stat-card {
+    @apply trading-card p-4 sm:p-6 hover:scale-[1.02] transition-transform duration-200;
+  }
+
+  /* Responsive tables */
+  .responsive-table-container {
+    @apply overflow-x-auto -mx-4 sm:mx-0;
+  }
+
+  .responsive-table {
+    @apply min-w-[600px] sm:min-w-full;
+  }
+
+  /* Mobile navigation */
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-card border-t border-border p-2 sm:hidden z-50;
+  }
+
+  .mobile-nav-item {
+    @apply flex flex-col items-center gap-1 p-2 rounded-lg text-xs;
+  }
+
+  /* Responsive forms */
+  .form-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+
+  .form-full {
+    @apply col-span-1 sm:col-span-2 lg:col-span-3;
+  }
+
+  /* Mobile modal optimization */
+  .mobile-modal {
+    @apply fixed inset-0 sm:inset-auto sm:relative sm:max-w-4xl sm:mx-auto sm:my-8;
+  }
+
+  .mobile-modal-content {
+    @apply h-full sm:h-auto max-h-screen sm:max-h-[90vh] overflow-y-auto;
+  }
+
+  /* Responsive spacing */
+  .section-padding {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  .content-spacing {
+    @apply space-y-4 sm:space-y-6 lg:space-y-8;
   }
 }

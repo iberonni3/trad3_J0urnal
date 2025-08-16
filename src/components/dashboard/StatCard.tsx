@@ -33,15 +33,15 @@ export function StatCard({
   };
 
   return (
-    <Card className={cn('stat-card', className)}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+    <Card className={cn('mobile-stat-card', className)}>
+      <CardContent className="section-padding">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2 flex-1 min-w-0">
+            <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
             <div className="space-y-1">
-              <p className="text-2xl font-bold">{value}</p>
+              <p className="text-xl sm:text-2xl font-bold break-words">{value}</p>
               {change && (
-                <p className={cn('text-sm font-medium', getChangeColor())}>
+                <p className={cn('text-xs sm:text-sm font-medium', getChangeColor())}>
                   {change}
                 </p>
               )}
@@ -50,7 +50,7 @@ export function StatCard({
               )}
             </div>
           </div>
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             {icon}
           </div>
         </div>

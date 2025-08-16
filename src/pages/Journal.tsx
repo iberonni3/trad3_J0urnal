@@ -310,40 +310,52 @@ export default function Journal() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="space-y-6 p-6">
+    <div className="min-h-screen bg-background mobile-container section-padding">
+      <div className="max-w-7xl mx-auto content-spacing">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Trading Journal</h1>
-            <p className="text-slate-400">
-              Document your trading journey, lessons learned, and psychological insights
-            </p>
+        <div className="trading-card section-padding mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Trading Journal</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                Document your trading journey, lessons learned, and psychological insights
+              </p>
+            </div>
+            
+            <Button 
+             className="trading-gradient text-white touch-friendly w-full sm:w-auto"
+              onClick={() => handleNewEntry(activeTab === 'lessons' ? 'lesson' : 'journal')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="mobile-hidden">{activeTab === 'lessons' ? 'New Lesson' : 'New Entry'}</span>
+              <span className="mobile-only">{activeTab === 'lessons' ? 'Add Lesson' : 'Add Entry'}</span>
+            </Button>
           </div>
-          
-          <Button 
-           className="bg-primary hover:bg-primary/90"
-            onClick={() => handleNewEntry(activeTab === 'lessons' ? 'lesson' : 'journal')}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {activeTab === 'lessons' ? 'New Lesson' : 'New Entry'}
-          </Button>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 bg-card border-border">
-            <TabsTrigger value="entries" className="data-[state=active]:bg-background">Daily Entries</TabsTrigger>
-            <TabsTrigger value="lessons" className="data-[state=active]:bg-background">Lessons Library</TabsTrigger>
-            <TabsTrigger value="insights" className="data-[state=active]:bg-background">Insights</TabsTrigger>
+            <TabsTrigger value="entries" className="data-[state=active]:bg-background text-xs sm:text-sm">
+              <span className="mobile-hidden">Daily Entries</span>
+              <span className="mobile-only">Entries</span>
+            </TabsTrigger>
+            <TabsTrigger value="lessons" className="data-[state=active]:bg-background text-xs sm:text-sm">
+              <span className="mobile-hidden">Lessons Library</span>
+              <span className="mobile-only">Lessons</span>
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="data-[state=active]:bg-background text-xs sm:text-sm">
+              <span className="mobile-hidden">Insights</span>
+              <span className="mobile-only">Stats</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="entries" className="space-y-6">
             {/* Filters */}
             <Card className="bg-card border-border">
-              <CardContent className="p-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
+              <CardContent className="section-padding">
+                <div className="responsive-flex gap-4">
+                  <div className="flex-1 order-1">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <Input
@@ -355,32 +367,38 @@ export default function Journal() {
                     </div>
                   </div>
                   
-                  <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-                    <SelectTrigger className="w-[180px] bg-card border-border">
-                      <SelectValue placeholder="Performance" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      <SelectItem value="all">All Performance</SelectItem>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="average">Average</SelectItem>
-                      <SelectItem value="poor">Poor</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="responsive-flex gap-2 order-2">
+                    <Select value={selectedFilter} onValueChange={setSelectedFilter}>
+                      <SelectTrigger className="w-full sm:w-[140px] bg-card border-border">
+                        <SelectValue placeholder="Performance" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        <SelectItem value="all">All Performance</SelectItem>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="good">Good</SelectItem>
+                        <SelectItem value="average">Average</SelectItem>
+                        <SelectItem value="poor">Poor</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                  <Button 
-                    variant={showHidden ? "default" : "outline"}
-                    onClick={() => setShowHidden(!showHidden)}
-                  className="bg-primary hover:bg-primary/90"
-                  >
-                    <EyeOff className="h-4 w-4 mr-2" />
-                    {showHidden ? "Hide Hidden" : "Show Hidden"}
-                  </Button>
+                    <Button 
+                      variant={showHidden ? "default" : "outline"}
+                      onClick={() => setShowHidden(!showHidden)}
+                      className={cn(
+                        "touch-friendly",
+                        showHidden ? "trading-gradient text-white" : "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <EyeOff className="h-4 w-4 mr-2 mobile-hidden" />
+                      <span className="mobile-hidden">{showHidden ? "Hide Hidden" : "Show Hidden"}</span>
+                      <span className="mobile-only">Hidden</span>
+                    </Button>
 
-                  <Button variant="outline" className="bg-primary hover:bg-primary/90">
-                    <Filter className="h-4 w-4 mr-2" />
-                    More Filters
-                  </Button>
+                    <Button variant="outline" className="border border-input bg-background hover:bg-accent hover:text-accent-foreground touch-friendly mobile-hidden">
+                      <Filter className="h-4 w-4 mr-2" />
+                      More Filters
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -415,7 +433,7 @@ export default function Journal() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleToggleHide(entry.id)}
-                         className="bg-primary hover:bg-primary/90"
+                         className="hover:bg-accent hover:text-accent-foreground"
                         >
                           {entry.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
@@ -423,7 +441,7 @@ export default function Journal() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleEditEntry(entry, 'journal')}
-                          className="bg-primary hover:bg-primary/90"
+                          className="hover:bg-accent hover:text-accent-foreground"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -431,7 +449,7 @@ export default function Journal() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleDeleteEntry(entry.id, 'journal')}
-                         className="bg-primary hover:bg-primary/90"
+                         className="hover:bg-destructive/20 hover:text-red-400"
                         >
                           <Trash2 className="h-4 w-4 text-red-400" />
                         </Button>
@@ -476,9 +494,9 @@ export default function Journal() {
           <TabsContent value="lessons" className="space-y-6">
             {/* Lesson Filters */}
             <Card className="bg-card border-border">
-              <CardContent className="p-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
+              <CardContent className="section-padding">
+                <div className="responsive-flex gap-4">
+                  <div className="flex-1 order-1">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <Input
@@ -490,21 +508,23 @@ export default function Journal() {
                     </div>
                   </div>
                   
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-[200px] bg-card border-border">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      {lessonCategories.map((category) => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="responsive-flex gap-2 order-2">
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger className="w-full sm:w-[160px] bg-card border-border">
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {lessonCategories.map((category) => (
+                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                  <Button variant="outline" className="bg-primary hover:bg-primary/90">
-                    <Filter className="h-4 w-4 mr-2" />
-                    More Filters
-                  </Button>
+                    <Button variant="outline" className="border border-input bg-background hover:bg-accent hover:text-accent-foreground touch-friendly mobile-hidden">
+                      <Filter className="h-4 w-4 mr-2" />
+                      More Filters
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -530,7 +550,7 @@ export default function Journal() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleEditEntry(lesson, 'lesson')}
-                          className="bg-primary hover:bg-primary/90"
+                          className="hover:bg-accent hover:text-accent-foreground"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -538,7 +558,7 @@ export default function Journal() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleDeleteEntry(lesson.id, 'lesson')}
-                          className="bg-primary hover:bg-primary/90"
+                          className="hover:bg-destructive/20 hover:text-red-400"
                         >
                           <Trash2 className="h-4 w-4 text-red-400" />
                         </Button>
@@ -668,7 +688,7 @@ export default function Journal() {
                   variant="ghost" 
                   size="sm" 
                   onClick={() => setIsDialogOpen(false)}
-                 className="bg-primary hover:bg-primary/90"
+                 className="hover:bg-accent hover:text-accent-foreground"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -789,7 +809,7 @@ export default function Journal() {
                               });
                             }
                           }}
-                         className="bg-primary hover:bg-primary/90"
+                         className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
                         >
                           Add
                         </Button>
@@ -805,7 +825,7 @@ export default function Journal() {
                                   tags: currentEntry.tags.filter((_, i) => i !== index)
                                 });
                               }}
-                             className="bg-primary hover:bg-primary/90"
+                             className="ml-1 hover:text-red-400 transition-colors"
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -936,7 +956,7 @@ export default function Journal() {
                               });
                             }
                           }}
-                          className="bg-primary hover:bg-primary/90"
+                          className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
                         >
                           Add
                         </Button>
@@ -952,7 +972,7 @@ export default function Journal() {
                                   tags: currentEntry.tags.filter((_, i) => i !== index)
                                 });
                               }}
-                              className="bg-primary hover:bg-primary/90"
+                              className="ml-1 hover:text-red-400 transition-colors"
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -990,14 +1010,14 @@ export default function Journal() {
                   <Button 
                     variant="outline" 
                     onClick={() => setIsDialogOpen(false)}
-                   className="bg-primary hover:bg-primary/90"
+                   className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleSaveEntry}
-                   className="bg-primary hover:bg-primary/90"
+                   className="trading-gradient text-white"
                   >
                     <Check className="h-4 w-4 mr-2" />
                     Save {entryType === 'lesson' ? 'Lesson' : 'Entry'}

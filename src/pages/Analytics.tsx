@@ -18,7 +18,8 @@ import {
   LineChart,
   Line,
   Area,
-  AreaChart
+  AreaChart,
+
 } from 'recharts';
 import { TrendingUp, TrendingDown, Target, Calculator, Calendar, Filter } from 'lucide-react';
 
@@ -82,34 +83,38 @@ export default function Analytics() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground">
-            Deep insights into your trading performance and patterns
-          </p>
+    <div className="min-h-screen bg-background mobile-container section-padding">
+      <div className="max-w-7xl mx-auto content-spacing">
+        {/* Header */}
+        <div className="trading-card section-padding">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Analytics</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                Deep insights into your trading performance and patterns
+              </p>
+            </div>
+            
+            <div className="responsive-flex gap-3">
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue placeholder="Time Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1m">Last Month</SelectItem>
+                  <SelectItem value="3m">Last 3 Months</SelectItem>
+                  <SelectItem value="6m">Last 6 Months</SelectItem>
+                  <SelectItem value="1y">Last Year</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" className="touch-friendly">
+                <Filter className="h-4 w-4 mr-2" />
+                <span className="mobile-hidden">Advanced Filters</span>
+                <span className="mobile-only">Filters</span>
+              </Button>
+            </div>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Time Range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1m">Last Month</SelectItem>
-              <SelectItem value="3m">Last 3 Months</SelectItem>
-              <SelectItem value="6m">Last 6 Months</SelectItem>
-              <SelectItem value="1y">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Advanced Filters
-          </Button>
-        </div>
-      </div>
 
       {/* Key Performance Indicators */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -174,15 +179,17 @@ export default function Analytics() {
         </Card>
       </div>
 
-      {/* Analytics Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="symbols">By Symbol</TabsTrigger>
-          <TabsTrigger value="setups">By Setup</TabsTrigger>
-          <TabsTrigger value="timeframe">By Timeframe</TabsTrigger>
-          <TabsTrigger value="patterns">Patterns</TabsTrigger>
-        </TabsList>
+        {/* Analytics Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="responsive-tabs-container">
+            <TabsList className="responsive-tabs-list">
+              <TabsTrigger value="overview" className="responsive-tab">Overview</TabsTrigger>
+              <TabsTrigger value="symbols" className="responsive-tab">Symbols</TabsTrigger>
+              <TabsTrigger value="setups" className="responsive-tab">Setups</TabsTrigger>
+              <TabsTrigger value="timeframe" className="responsive-tab">Time</TabsTrigger>
+              <TabsTrigger value="patterns" className="responsive-tab">Patterns</TabsTrigger>
+            </TabsList>
+          </div>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
@@ -203,7 +210,7 @@ export default function Analytics() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                       <XAxis dataKey="month" />
-                      <YAxis tickFormatter={(value) => `$${value}`} />
+                      <YAxis tickFormatter={(value) => `${value}`} />
                       <Tooltip content={<CustomTooltip />} />
                       <Area
                         type="monotone"
@@ -212,7 +219,6 @@ export default function Analytics() {
                         fillOpacity={1}
                         fill="url(#profitGradient)"
                       />
-                      <Bar dataKey="loss" fill="hsl(var(--danger))" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -267,16 +273,16 @@ export default function Analytics() {
             <CardContent>
               <div className="space-y-4">
                 {symbolData.map((symbol) => (
-                  <div key={symbol.symbol} className="flex items-center justify-between p-4 rounded-lg border border-border">
+                  <div key={symbol.symbol} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-border gap-3">
                     <div className="flex items-center gap-4">
-                      <Badge variant="outline" className="font-mono">{symbol.symbol}</Badge>
+                      <Badge variant="outline" className="font-mono text-xs sm:text-sm">{symbol.symbol}</Badge>
                       <div>
-                        <p className="font-medium">{symbol.trades} trades</p>
-                        <p className="text-sm text-muted-foreground">Win Rate: {symbol.winRate}%</p>
+                        <p className="font-medium text-sm sm:text-base">{symbol.trades} trades</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Win Rate: {symbol.winRate}%</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`font-bold ${symbol.profit >= 0 ? 'text-success' : 'text-danger'}`}>
+                    <div className="text-left sm:text-right">
+                      <p className={`font-bold text-sm sm:text-base ${symbol.profit >= 0 ? 'text-success' : 'text-danger'}`}>
                         {formatCurrency(symbol.profit)}
                       </p>
                     </div>
@@ -318,22 +324,22 @@ export default function Analytics() {
             <CardContent>
               <div className="space-y-4">
                 {timeframeData.map((tf) => (
-                  <div key={tf.timeframe} className="grid grid-cols-4 gap-4 p-4 rounded-lg border border-border">
-                    <div>
-                      <p className="font-medium">{tf.timeframe}</p>
-                      <p className="text-sm text-muted-foreground">Timeframe</p>
+                  <div key={tf.timeframe} className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-lg border border-border">
+                    <div className="text-center sm:text-left">
+                      <p className="font-medium text-sm sm:text-base">{tf.timeframe}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Timeframe</p>
                     </div>
-                    <div>
-                      <p className="font-medium">{tf.trades}</p>
-                      <p className="text-sm text-muted-foreground">Trades</p>
+                    <div className="text-center sm:text-left">
+                      <p className="font-medium text-sm sm:text-base">{tf.trades}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Trades</p>
                     </div>
-                    <div>
-                      <p className="font-medium">{tf.avgR}R</p>
-                      <p className="text-sm text-muted-foreground">Avg R-Multiple</p>
+                    <div className="text-center sm:text-left">
+                      <p className="font-medium text-sm sm:text-base">{tf.avgR}R</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Avg R-Multiple</p>
                     </div>
-                    <div>
-                      <p className="font-medium text-success">{tf.winRate}%</p>
-                      <p className="text-sm text-muted-foreground">Win Rate</p>
+                    <div className="text-center sm:text-left">
+                      <p className="font-medium text-success text-sm sm:text-base">{tf.winRate}%</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Win Rate</p>
                     </div>
                   </div>
                 ))}
@@ -367,6 +373,7 @@ export default function Analytics() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }
