@@ -62,9 +62,8 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center ">
-      <Card className="w-full max-w-md p-6 rounded-lg shadow- bg-card text-card-foreground">
-        <CardHeader className="space-y-2 text-center">
+    <Card className="w-full max-w-md mx-4 sm:mx-0 p-4 sm:p-6 rounded-lg shadow-lg bg-card text-card-foreground mobile-tap-highlight">
+      <CardHeader className="space-y-2 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <div className="p-2 rounded-lg hero-gradient">
               <TrendingUp className="h-6 w-6 text-white" />
@@ -160,7 +159,6 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
           )}
         </CardContent>
       </Card>
-    </div>
   );
 }
 

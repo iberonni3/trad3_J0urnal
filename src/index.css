@@ -8,56 +8,57 @@
 
 @layer base {
   :root {
-    /* Core Background & Text - Deep Purple Theme */
-    --background: 263 30% 8%;
-    --foreground: 263 15% 92%;
+    /* Light theme - matching login page gradient colors */
+    --background: linear-gradient(to bottom right, hsl(0 0% 100%), hsl(270 100% 95%), hsl(270 100% 20%));
+    --background-solid: 270 100% 95%;
+    --foreground: 263 30% 15%;
 
-    /* Cards & Surfaces */
-    --card: 263 25% 12%;
-    --card-foreground: 263 15% 92%;
+    /* Cards & Surfaces - gradient themed */
+    --card: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(240, 230, 255, 0.6));
+    --card-foreground: 263 30% 15%;
     
     /* Trading-specific colors */
     --primary: 270 91% 65%;
-    --primary-foreground: 263 30% 8%;
+    --primary-foreground: 0 0% 100%;
     --primary-hover: 270 91% 58%;
     
-    /* Success/Profit colors */
-    --success: 142 76% 36%;
+    /* Success/Profit colors - enhanced for light mode */
+    --success: 142 76% 28%;
     --success-foreground: 0 0% 100%;
-    --success-light: 142 76% 94%;
+    --success-light: 142 76% 97%;
     
-    /* Danger/Loss colors */
-    --danger: 0 84% 60%;
+    /* Danger/Loss colors - enhanced for light mode */
+    --danger: 0 84% 45%;
     --danger-foreground: 0 0% 100%;
     --danger-light: 0 84% 97%;
     
-    /* Neutral states */
-    --secondary: 263 20% 18%;
-    --secondary-foreground: 263 15% 92%;
+    /* Neutral states - gradient themed */
+    --secondary: linear-gradient(135deg, rgba(248, 245, 255, 0.7), rgba(235, 220, 255, 0.5));
+    --secondary-foreground: 263 30% 15%;
     
-    --muted: 263 20% 15%;
-    --muted-foreground: 263 15% 65%;
+    --muted: linear-gradient(135deg, rgba(248, 245, 255, 0.6), rgba(230, 215, 255, 0.4));
+    --muted-foreground: 263 15% 45%;
     
-    --accent: 263 30% 16%;
-    --accent-foreground: 263 15% 92%;
+    --accent: linear-gradient(135deg, rgba(248, 245, 255, 0.7), rgba(235, 220, 255, 0.5));
+    --accent-foreground: 263 30% 15%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs */
-    --border: 263 20% 20%;
-    --input: 263 20% 18%;
+    /* Borders & Inputs - softer for gradient theme */
+    --border: 263 20% 75%;
+    --input: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(250, 245, 255, 0.7));
     --ring: 270 91% 65%;
     
     /* Trading metrics colors */
     --profit: 142 76% 36%;
     --loss: 0 84% 60%;
-    --breakeven: 263 15% 65%;
+    --breakeven: 263 15% 45%;
     
     /* Chart colors */
     --chart-up: 142 76% 36%;
     --chart-down: 0 84% 60%;
-    --chart-neutral: 263 15% 70%;
+    --chart-neutral: 263 15% 50%;
     
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(270 91% 65%), hsl(270 91% 58%));
@@ -65,21 +66,25 @@
     --gradient-hero: linear-gradient(135deg, hsl(270 91% 65%) 0%, hsl(280 100% 70%) 100%);
     
     /* Shadows */
-    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.3), 0 1px 2px -1px hsl(0 0% 0% / 0.3);
-    --shadow-elevated: 0 10px 15px -3px hsl(0 0% 0% / 0.2), 0 4px 6px -4px hsl(0 0% 0% / 0.2);
-    --shadow-trading: 0 4px 6px -1px hsl(270 91% 65% / 0.2), 0 2px 4px -2px hsl(270 91% 65% / 0.2);
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-elevated: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+    --shadow-trading: 0 4px 6px -1px hsl(270 91% 65% / 0.1), 0 2px 4px -2px hsl(270 91% 65% / 0.1);
 
     --radius: 0.75rem;
     
-    /* Sidebar variables */
-    --sidebar-background: 263 25% 10%;
-    --sidebar-foreground: 263 15% 92%;
+    /* Sidebar variables - gradient themed */
+    --sidebar-background: linear-gradient(135deg, rgba(252, 250, 255, 0.85), rgba(245, 235, 255, 0.7));
+    --sidebar-foreground: 263 30% 15%;
     --sidebar-primary: 270 91% 65%;
-    --sidebar-primary-foreground: 263 30% 8%;
-    --sidebar-accent: 263 20% 16%;
-    --sidebar-accent-foreground: 263 15% 92%;
-    --sidebar-border: 263 20% 20%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: linear-gradient(135deg, rgba(248, 245, 255, 0.8), rgba(238, 225, 255, 0.6));
+    --sidebar-accent-foreground: 263 30% 15%;
+    --sidebar-border: 263 20% 75%;
     --sidebar-ring: 270 91% 65%;
+    
+    /* Popover colors - gradient themed */
+    --popover: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 245, 255, 0.8));
+    --popover-foreground: 263 30% 15%;
   }
 
   .dark {
@@ -142,6 +147,10 @@
     --sidebar-accent-foreground: 263 15% 95%;
     --sidebar-border: 263 25% 18%;
     --sidebar-ring: 270 91% 70%;
+    
+    /* Popover colors */
+    --popover: 263 30% 10%;
+    --popover-foreground: 263 15% 95%;
   }
 }
 
@@ -150,8 +159,28 @@
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
+  html, body {
+    @apply text-foreground font-sans antialiased;
+    min-height: 100vh;
+    width: 100%;
+  }
+  
+  /* Light mode gradient covering entire project */
+  :root {
+    background: linear-gradient(to bottom right, hsl(0 0% 100%), hsl(270 100% 88%), hsl(270 100% 20%));
+    min-height: 100vh;
+  }
+  
+  :root body {
+    background: transparent;
+  }
+  
+  .dark {
+    background: hsl(263 35% 6%);
+  }
+  
+  .dark body {
+    background: transparent;
   }
 
   html {
@@ -312,5 +341,148 @@
 
   .content-spacing {
     @apply space-y-4 sm:space-y-6 lg:space-y-8;
+  }
+
+  /* Login page gradient utility */
+  .login-gradient {
+    background: linear-gradient(to bottom right, hsl(0 0% 100%), hsl(270 100% 88%), hsl(270 100% 20%));
+  }
+  
+  /* Light mode gradient element overrides */
+  :root .bg-card {
+    background: var(--card);
+  }
+  
+  :root .bg-secondary {
+    background: var(--secondary);
+  }
+  
+  :root .bg-muted {
+    background: var(--muted);
+  }
+  
+  :root .bg-accent {
+    background: var(--accent);
+  }
+  
+  :root .bg-popover {
+    background: var(--popover);
+  }
+  
+  :root .bg-sidebar-background {
+    background: var(--sidebar-background);
+  }
+  
+  :root .bg-sidebar-accent {
+    background: var(--sidebar-accent);
+  }
+  
+  :root .bg-input {
+    background: var(--input);
+  }
+  
+  /* Light mode text color fixes */
+  :root .text-white {
+    color: hsl(263 30% 15%) !important;
+  }
+  
+  :root .text-slate-300 {
+    color: hsl(263 20% 35%) !important;
+  }
+  
+  :root .text-slate-400 {
+    color: hsl(263 15% 45%) !important;
+  }
+  
+  :root .text-slate-500 {
+    color: hsl(263 15% 50%) !important;
+  }
+  
+  /* Light mode color fixes for Calendar and Journal */
+  :root .text-success {
+    color: hsl(142 76% 28%) !important;
+  }
+  
+  :root .text-success-foreground {
+    color: hsl(142 76% 28%) !important;
+  }
+  
+  :root .text-destructive {
+    color: hsl(0 84% 45%) !important;
+  }
+  
+  :root .text-red-400 {
+    color: hsl(0 84% 45%) !important;
+  }
+  
+  :root .text-green-400 {
+    color: hsl(142 76% 28%) !important;
+  }
+  
+  :root .text-blue-400 {
+    color: hsl(214 76% 45%) !important;
+  }
+  
+  :root .text-yellow-400 {
+    color: hsl(45 76% 45%) !important;
+  }
+  
+  /* Additional responsive utilities */
+  .responsive-tabs-container {
+    @apply overflow-x-auto;
+  }
+
+  .responsive-tabs-list {
+    @apply flex min-w-max w-full;
+  }
+
+  .responsive-tab {
+    @apply flex-1 sm:flex-none px-3 py-2 text-sm whitespace-nowrap;
+  }
+
+  .responsive-card-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6;
+  }
+
+  .responsive-stats-grid {
+    @apply grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4;
+  }
+
+  /* Table responsive utilities */
+  .table-header {
+    @apply px-3 sm:px-6 py-3 text-left text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider;
+  }
+
+  .table-cell {
+    @apply px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm;
+  }
+
+  /* Mobile-optimized calendar */
+  .calendar-day {
+    @apply h-12 sm:h-16 md:h-20 p-1 sm:p-2 border cursor-pointer transition-all duration-200 relative flex flex-col justify-between;
+  }
+
+  /* Enhanced mobile interactions */
+  .mobile-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+    @apply touch-manipulation;
+  }
+
+  /* Safe area adjustments for mobile */
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Responsive text sizing */
+  .responsive-text-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .responsive-text-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .responsive-text-2xl {
+    @apply text-xl sm:text-2xl md:text-3xl;
   }
 }

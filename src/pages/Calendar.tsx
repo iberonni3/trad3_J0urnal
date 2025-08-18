@@ -57,7 +57,7 @@ export default function TradingCalendar() {
     trades: '1'
   });
 
-    const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -194,288 +194,290 @@ export default function TradingCalendar() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative mobile-container">
-      {/* Header */}
-      <div className="trading-card section-padding border-b">
-        <div className="flex flex-col space-y-4">
-          {/* Navigation Row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigateMonth('prev')} className="touch-friendly">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground text-sm touch-friendly mobile-hidden">
-                TODAY
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigateMonth('next')} className="touch-friendly">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <h1 className="text-base sm:text-lg font-medium">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </h1>
+    <div className="min-h-screen bg-background mobile-container">
+      <div className="max-w-7xl mx-auto content-spacing">
+        {/* Header */}
+        <div className="trading-card section-padding">
+          <div className="flex flex-col space-y-4">
+            {/* Navigation Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <Button variant="ghost" size="sm" onClick={() => navigateMonth('prev')} className="touch-friendly">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="text-muted-foreground text-sm mobile-hidden touch-friendly">
+                  TODAY
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => navigateMonth('next')} className="touch-friendly">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <h1 className="text-base sm:text-lg font-medium">
+                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </h1>
+              </div>
+
+              <div className="relative" ref={dropdownRef}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDisplayOptions(!showDisplayOptions)}
+                  aria-label="Settings"
+                  className="touch-friendly"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                {showDisplayOptions && (
+                  <div className="absolute right-0 top-full mt-2 bg-card border rounded-lg p-3 z-20 min-w-56 shadow-lg">
+                    <div className="text-sm font-medium mb-3">Display stats</div>
+                    {displayModes.map((mode) => (
+                      <div 
+                        key={mode.value}
+                        className="flex items-center gap-3 p-2 hover:bg-muted rounded cursor-pointer touch-friendly"
+                        onClick={() => {
+                          setDisplayMode(mode.value);
+                          setShowDisplayOptions(false);
+                        }}
+                      >
+                        <div className={cn(
+                          "w-4 h-4 rounded border-2 flex items-center justify-center",
+                          displayMode === mode.value 
+                            ? 'bg-primary border-primary' 
+                            : 'border-muted-foreground'
+                        )}>
+                          {displayMode === mode.value && (
+                            <div className="w-2 h-2 bg-primary-foreground rounded-full" />
+                          )}
+                        </div>
+                        <span className="text-sm">{mode.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="relative" ref={dropdownRef}>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowDisplayOptions(!showDisplayOptions)}
-                aria-label="Settings"
-                className="touch-friendly"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-              {showDisplayOptions && (
-                <div className="absolute right-0 top-full mt-2 bg-card border rounded-lg p-3 z-20 min-w-56 shadow-lg">
-                  <div className="text-sm font-medium mb-3">Display stats</div>
-                  {displayModes.map((mode) => (
-                    <div 
-                      key={mode.value}
-                      className="flex items-center gap-3 p-2 hover:bg-muted rounded cursor-pointer"
-                      onClick={() => {
-                        setDisplayMode(mode.value);
-                        setShowDisplayOptions(false);
-                      }}
-                    >
-                      <div className={cn(
-                        "w-4 h-4 rounded border-2 flex items-center justify-center",
-                        displayMode === mode.value 
-                          ? 'bg-primary border-primary' 
-                          : 'border-muted-foreground'
-                      )}>
-                        {displayMode === mode.value && (
-                          <div className="w-2 h-2 bg-primary-foreground rounded-full" />
-                        )}
-                      </div>
-                      <span className="text-sm">{mode.label}</span>
+            {/* Monthly Stats Row */}
+            <div className="responsive-flex sm:items-center">
+              <span className="text-muted-foreground text-sm mobile-hidden">Monthly stats:</span>
+              <div className="flex flex-wrap gap-2 sm:gap-4">
+                <div className="bg-success/20 border border-success/30 rounded-full px-3 py-1">
+                  <span className="text-success-foreground font-medium text-sm">
+                    ${totalPnL.toLocaleString()}
+                  </span>
+                </div>
+                <div className="bg-primary/20 border border-primary/30 rounded-full px-3 py-1">
+                  <span className="text-primary-foreground font-medium text-sm">
+                    {tradingDays} days
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Main Calendar */}
+          <div className="lg:col-span-3 trading-card section-padding">
+            <div className="grid grid-cols-7 gap-1">
+              {/* Day headers */}
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-2 sm:py-3">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.charAt(0)}</span>
+                </div>
+              ))}
+
+              {/* Empty cells for days before month starts */}
+              {Array.from({ length: firstDayOfMonth }).map((_, index) => (
+                <div key={`empty-${index}`} className="h-16 sm:h-20" />
+              ))}
+
+              {/* Days of the month */}
+              {Array.from({ length: daysInMonth }).map((_, index) => {
+                const day = index + 1;
+                const data = getDayData(day);
+                const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isSelected = selectedDate === dateStr;
+                
+                return (
+                  <div
+                    key={day}
+                    className={cn(
+                      'h-16 sm:h-20 p-1 sm:p-2 border cursor-pointer transition-all duration-200 relative flex flex-col justify-between',
+                      getDayColor(data),
+                      isSelected && 'ring-2 ring-primary',
+                      !data && 'hover:bg-muted/50'
+                    )}
+                    onClick={() => setSelectedDate(dateStr)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs sm:text-sm font-medium">{day}</span>
+                      {data && (
+                        <BookOpen className="h-2 w-2 sm:h-3 sm:w-3 opacity-60" />
+                      )}
                     </div>
-                  ))}
+                    
+                    {data && (
+                      <div className="text-center">
+                        <div className="font-bold text-xs sm:text-sm mb-0.5">
+                          {formatDisplayValue(data, displayMode)}
+                        </div>
+                        <div className="text-xs text-muted-foreground hidden sm:block">
+                          {data.trades} trade{data.trades !== 1 ? 's' : ''}
+                        </div>
+                        <div className="text-xs text-muted-foreground/60 hidden sm:block">
+                          {displayMode !== 'rMultiple' && `${data.rMultiple}R, `}{data.winRate.toFixed(0)}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Weekly Summary Sidebar */}
+          <div className="lg:col-span-1 trading-card section-padding lg:border-none space-y-4">
+            {weeklyStats.map((stats, index) => (
+              <div key={index} className="bg-card border rounded-lg p-4">
+                <div className="text-sm text-muted-foreground mb-2">Week {stats.weekNumber}</div>
+                <div className={cn(
+                  "text-xl font-bold mb-1",
+                  stats.pnl > 0 ? "text-success" : 
+                  stats.pnl < 0 ? "text-destructive" : 
+                  "text-muted-foreground"
+                )}>
+                  ${stats.pnl.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">{stats.days} days</div>
+              </div>
+            ))}
+
+            {/* Selected Day Detail */}
+            <div className="bg-card border rounded-lg p-4 mt-6 shadow-sm">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                {new Date(selectedDate).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              
+              {currentMonthData[selectedDate] ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div>
+                      <div className="text-lg font-bold">
+                        {currentMonthData[selectedDate].trades}
+                      </div>
+                      <div className="text-xs text-muted-foreground">trades</div>
+                    </div>
+                    <div>
+                      <div className={cn(
+                        "text-lg font-bold",
+                        currentMonthData[selectedDate].pnl > 0 ? "text-success" : 
+                        currentMonthData[selectedDate].pnl < 0 ? "text-destructive" : 
+                        "text-muted-foreground"
+                      )}>
+                        {formatPnL(currentMonthData[selectedDate].pnl)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">P&L</div>
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => setShowAddTrade(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Trade
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground text-sm mb-3">No trading activity</p>
+                  <Button 
+                    size="sm"
+                    onClick={() => setShowAddTrade(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Trade
+                  </Button>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Monthly Stats Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <span className="text-muted-foreground text-sm mobile-hidden">Monthly stats:</span>
-            <div className="responsive-flex gap-2 sm:gap-4">
-              <div className="bg-success/20 border border-success/30 rounded-full px-3 py-1">
-                <span className="text-success-foreground font-medium text-sm">
-                  ${totalPnL.toLocaleString()}
-                </span>
-              </div>
-              <div className="bg-primary/20 border border-primary/30 rounded-full px-3 py-1">
-                <span className="text-primary-foreground font-medium text-sm">
-                  {tradingDays} days
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col lg:flex-row">
-        {/* Main Calendar */}
-        <div className="flex-1 section-padding">
-          <div className="grid grid-cols-7 gap-1">
-            {/* Day headers */}
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-2 sm:py-3">
-                <span className="mobile-hidden">{day}</span>
-                <span className="mobile-only">{day.charAt(0)}</span>
-              </div>
-            ))}
-
-            {/* Empty cells for days before month starts */}
-            {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-              <div key={`empty-${index}`} className="h-16 sm:h-20" />
-            ))}
-
-            {/* Days of the month */}
-            {Array.from({ length: daysInMonth }).map((_, index) => {
-              const day = index + 1;
-              const data = getDayData(day);
-              const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const isSelected = selectedDate === dateStr;
-              
-              return (
-                <div
-                  key={day}
-                  className={cn(
-                    'h-16 sm:h-20 p-1 sm:p-2 border cursor-pointer transition-all duration-200 relative flex flex-col justify-between',
-                    getDayColor(data),
-                    isSelected && 'ring-2 ring-primary',
-                    !data && 'hover:bg-muted/50'
-                  )}
-                  onClick={() => setSelectedDate(dateStr)}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs sm:text-sm font-medium">{day}</span>
-                    {data && (
-                      <BookOpen className="h-2 w-2 sm:h-3 sm:w-3 opacity-60" />
-                    )}
-                  </div>
-                  
-                  {data && (
-                    <div className="text-center">
-                      <div className="font-bold text-xs sm:text-sm mb-0.5">
-                        {formatDisplayValue(data, displayMode)}
-                      </div>
-                      <div className="text-xs text-muted-foreground mobile-hidden">
-                        {data.trades} trade{data.trades !== 1 ? 's' : ''}
-                      </div>
-                      <div className="text-xs text-muted-foreground/60 mobile-hidden">
-                        {displayMode !== 'rMultiple' && `${data.rMultiple}R, `}{data.winRate.toFixed(0)}%
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
 
-        {/* Weekly Summary Sidebar */}
-        <div className="w-full lg:w-80 section-padding lg:border-l border-border space-y-4">
-          {weeklyStats.map((stats, index) => (
-            <div key={index} className="bg-card border rounded-lg p-4">
-              <div className="text-sm text-muted-foreground mb-2">Week {stats.weekNumber}</div>
-              <div className={cn(
-                "text-xl font-bold mb-1",
-                stats.pnl > 0 ? "text-success" : 
-                stats.pnl < 0 ? "text-destructive" : 
-                "text-muted-foreground"
-              )}>
-                ${stats.pnl.toLocaleString()}
-              </div>
-              <div className="text-xs text-muted-foreground">{stats.days} days</div>
-            </div>
-          ))}
-
-          {/* Selected Day Detail */}
-          <div className="bg-card border rounded-lg p-4 mt-6 shadow-sm">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              {new Date(selectedDate).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric' 
-              })}
-            </h3>
-            
-            {currentMonthData[selectedDate] ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-center">
-                  <div>
-                    <div className="text-lg font-bold">
-                      {currentMonthData[selectedDate].trades}
-                    </div>
-                    <div className="text-xs text-muted-foreground">trades</div>
-                  </div>
-                  <div>
-                    <div className={cn(
-                      "text-lg font-bold",
-                      currentMonthData[selectedDate].pnl > 0 ? "text-success" : 
-                      currentMonthData[selectedDate].pnl < 0 ? "text-destructive" : 
-                      "text-muted-foreground"
-                    )}>
-                      {formatPnL(currentMonthData[selectedDate].pnl)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">P&L</div>
-                  </div>
-                </div>
+        {/* Add Trade Modal */}
+        {showAddTrade && (
+          <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+            <div className="bg-card border rounded-lg p-6 w-full max-w-md shadow-xl">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Add Trade</h3>
                 <Button 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => setShowAddTrade(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Trade
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-muted-foreground text-sm mb-3">No trading activity</p>
-                <Button 
-                  size="sm"
-                  onClick={() => setShowAddTrade(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Trade
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Add Trade Modal */}
-      {showAddTrade && (
-        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-card border rounded-lg p-6 w-96 shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Add Trade</h3>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setShowAddTrade(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-muted-foreground mb-1">Symbol</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-input border rounded px-3 py-2"
-                  value={newTrade.symbol}
-                  onChange={(e) => setNewTrade({...newTrade, symbol: e.target.value})}
-                  placeholder="e.g., EURUSD"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm text-muted-foreground mb-1">Direction</label>
-                <select 
-                  className="w-full bg-input border rounded px-3 py-2"
-                  value={newTrade.direction}
-                  onChange={(e) => setNewTrade({...newTrade, direction: e.target.value})}
-                >
-                  <option value="long">Long</option>
-                  <option value="short">Short</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm text-muted-foreground mb-1">P&L ($)</label>
-                <input 
-                  type="number" 
-                  className="w-full bg-input border rounded px-3 py-2"
-                  value={newTrade.pnl}
-                  onChange={(e) => setNewTrade({...newTrade, pnl: e.target.value})}
-                  placeholder="e.g., 450"
-                />
-              </div>
-              
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
+                  variant="ghost" 
+                  size="icon"
                   onClick={() => setShowAddTrade(false)}
                 >
-                  Cancel
+                  <X className="h-4 w-4" />
                 </Button>
-                <Button 
-                  className="flex-1"
-                  onClick={handleAddTrade}
-                >
-                  Add Trade
-                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">Symbol</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-input border rounded px-3 py-2"
+                    value={newTrade.symbol}
+                    onChange={(e) => setNewTrade({...newTrade, symbol: e.target.value})}
+                    placeholder="e.g., EURUSD"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">Direction</label>
+                  <select 
+                    className="w-full bg-input border rounded px-3 py-2"
+                    value={newTrade.direction}
+                    onChange={(e) => setNewTrade({...newTrade, direction: e.target.value})}
+                  >
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">P&L ($)</label>
+                  <input 
+                    type="number" 
+                    className="w-full bg-input border rounded px-3 py-2"
+                    value={newTrade.pnl}
+                    onChange={(e) => setNewTrade({...newTrade, pnl: e.target.value})}
+                    placeholder="e.g., 450"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setShowAddTrade(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={handleAddTrade}
+                  >
+                    Add Trade
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

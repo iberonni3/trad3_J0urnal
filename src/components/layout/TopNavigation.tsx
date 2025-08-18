@@ -15,11 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { getAuth, onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/components/theme-provider";
 
 export function TopNavigation() {
   const navigate = useNavigate();
   const auth = getAuth();
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const { setTheme, theme } = useTheme();
 
   // Listen for auth state changes
   useEffect(() => {
@@ -36,6 +38,10 @@ export function TopNavigation() {
     } catch (error) {
       console.error("Logout error:", error);
     }
+  };
+
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
   };
 
   return (
@@ -59,7 +65,7 @@ export function TopNavigation() {
           </div>
 
           {/* Theme Toggle */}
-          <Button variant="ghost" size="sm" className="touch-friendly sm:h-9 sm:w-9 sm:p-0">
+          <Button variant="ghost" size="sm" className="touch-friendly sm:h-9 sm:w-9 sm:p-0" onClick={toggleTheme}>
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>

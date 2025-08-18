@@ -6,10 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopNavigation } from "@/components/layout/TopNavigation";
+import { ThemeProvider } from "@/components/theme-provider";
 
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import Trades from "./pages/Trades";
+import Charts from "./pages/Charts";
 import Analytics from "./pages/Analytics";
 import Calendar from "./pages/Calendar";
 import Journal from "./pages/Journal";
@@ -24,7 +26,7 @@ const queryClient = new QueryClient();
 // Dashboard Layout
 const AppLayout = () => (
   <SidebarProvider>
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex min-h-screen w-full">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavigation />
@@ -40,17 +42,18 @@ const AppLayout = () => (
 
 // Standalone Layout (no sidebar/nav)
 const StandaloneLayout = () => (
-  <div className="min-h-screen w-screen bg-background dark:bg-background-dark flex items-center justify-center">
+  <div className="min-h-screen w-screen flex items-center justify-center">
     <Outlet />
   </div>
 );
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <ThemeProvider defaultTheme="dark" storageKey="tradejournal-ui-theme">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <Routes>
           {/* Public Auth Page */}
           <Route element={<StandaloneLayout />}>
@@ -61,6 +64,9 @@ const App = () => (
 
           {/* Protected Dashboard Pages */}
           <Route element={<ProtectedRoute />}>
+            {/* Charts page with full screen layout */}
+            <Route path="/charts" element={<Charts />} />
+            
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/trades" element={<Trades />} />
@@ -92,8 +98,9 @@ const App = () => (
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

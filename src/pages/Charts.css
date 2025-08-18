@@ -1,0 +1,75 @@
+/* src/pages/Charts.css */
+
+.charts-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0f1724;
+  color: #e6eef8;
+}
+
+.charts-header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(90deg, rgba(8,10,14,0.6), rgba(6,8,12,0.4));
+  z-index: 30;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.04);
+  color: #e6eef8;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.trade-summary { display:flex; gap:12px; align-items:center; }
+.trade-summary .symbol { font-weight:700; font-size:18px; }
+.trade-summary .direction.long { color:#10b981 }
+.trade-summary .direction.short { color:#ef4444 }
+.trade-summary .prices { display:flex; gap:8px; color:#9fb0c8; font-size:13px; }
+
+/* Overlay marker styles */
+.tv-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: white;
+  background: rgba(6, 10, 14, 0.9);
+  box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+  border: 1px solid rgba(255,255,255,0.03);
+  pointer-events: none;
+  z-index: 40;
+}
+
+.tv-marker-entry {
+  background: linear-gradient(180deg, rgba(16,185,129,0.95), rgba(12,124,86,0.95));
+  color: #021;
+}
+
+.tv-marker-exit {
+  background: linear-gradient(180deg, rgba(239,68,68,0.96), rgba(185,28,28,0.96));
+  color: #210;
+}
+
+.tv-marker-fallback {
+  left: 12px !important;
+  top: 12px !important;
+  transform: none !important;
+  background: rgba(20,22,26,0.9);
+}
+
+/* SVG line styling */
+.tv-marker-line {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}

@@ -107,7 +107,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md trading-card scale-90 transform">
+    <Card className="w-full max-w-md mx-4 sm:mx-0 trading-card mobile-tap-highlight">
       <CardHeader className="space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <div className="p-2 rounded-lg hero-gradient">

@@ -353,7 +353,7 @@ export default function Journal() {
           <TabsContent value="entries" className="space-y-6">
             {/* Filters */}
             <Card className="bg-card border-border">
-              <CardContent className="section-padding">
+              <CardContent className="p-4 sm:p-6">
                 <div className="responsive-flex gap-4">
                   <div className="flex-1 order-1">
                     <div className="relative">
@@ -494,7 +494,7 @@ export default function Journal() {
           <TabsContent value="lessons" className="space-y-6">
             {/* Lesson Filters */}
             <Card className="bg-card border-border">
-              <CardContent className="section-padding">
+              <CardContent className="p-4 sm:p-6">
                 <div className="responsive-flex gap-4">
                   <div className="flex-1 order-1">
                     <div className="relative">

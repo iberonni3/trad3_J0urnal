@@ -28,8 +28,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Search, Filter, Download, ArrowUpRight, ArrowDownRight, X } from 'lucide-react';
+import { Plus, Search, Filter, Download, ArrowUpRight, ArrowDownRight, X, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 // Extended sample data for trades page
 const allTradesData = [
@@ -137,6 +138,7 @@ interface Trade {
 }
 
 export default function Trades() {
+  const navigate = useNavigate();
   const [allTrades, setAllTrades] = useState<Trade[]>(allTradesData);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -309,6 +311,10 @@ export default function Trades() {
     ) : (
       <ArrowDownRight className="h-4 w-4 text-danger" />
     );
+  };
+
+  const handleViewTrade = (trade: Trade) => {
+    navigate('/charts', { state: { trade } });
   };
 
   return (
@@ -621,8 +627,14 @@ export default function Trades() {
                       {getStatusBadge(trade.status)}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
-                        View
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewTrade(trade)}
+                        className="hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Chart
                       </Button>
                     </TableCell>
                   </TableRow>

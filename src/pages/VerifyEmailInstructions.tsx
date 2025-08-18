@@ -8,9 +8,9 @@ export function VerifyEmailInstructions() {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-white via-purple-200 to-purple-900">
-      <div className="w-full max-w-md">
-        <Card className="bg-background text-background-foreground shadow-lg">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-white via-purple-200 to-purple-900 mobile-container">
+      <div className="w-full max-w-md mx-auto">
+        <Card className="bg-card text-card-foreground shadow-lg mx-4 sm:mx-0">
           <CardHeader>
             <CardTitle>Verify Your Email</CardTitle>
           </CardHeader>

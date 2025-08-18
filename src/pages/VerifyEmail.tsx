@@ -37,8 +37,8 @@ export function VerifyEmail() {
   }, [mode, oobCode, navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-screen mobile-container">
+      <Card className="w-full max-w-md mx-4 sm:mx-0">
         <CardHeader>
           <CardTitle>Verifying your email...</CardTitle>
         </CardHeader>
