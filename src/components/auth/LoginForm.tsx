@@ -62,7 +62,7 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-4 sm:mx-0 p-4 sm:p-6 rounded-lg shadow-lg bg-card text-card-foreground mobile-tap-highlight">
+    <Card className="w-full max-w-md mx-4 sm:mx-0 glass-card mobile-tap-highlight">
       <CardHeader className="space-y-2 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <div className="p-2 rounded-lg hero-gradient">
@@ -124,9 +124,11 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
 
           <div className="space-y-4">
             <div className="relative">
-              <div className="absolute inset-0 flex items-center"></div>
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-muted-foreground/20"></div>
+              </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background dark:bg-background-dark px-2 text-muted-foreground">
+                <span className="bg-card px-2 text-muted-foreground">
                   Or continue with
                 </span>
               </div>

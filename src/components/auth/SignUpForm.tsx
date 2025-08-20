@@ -107,7 +107,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-4 sm:mx-0 trading-card mobile-tap-highlight">
+    <Card className="w-full max-w-md mx-4 sm:mx-0 glass-card mobile-tap-highlight">
       <CardHeader className="space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <div className="p-2 rounded-lg hero-gradient">
@@ -246,7 +246,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
               <Separator />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
             </div>
           </div>
 
