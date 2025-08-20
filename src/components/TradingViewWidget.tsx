@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, memo } from 'react';
 
 function TradingViewWidget() {
-  const container = useRef();
+  const container = useRef<HTMLDivElement>(null);
 
   useEffect(
     () => {
@@ -35,7 +35,9 @@ function TradingViewWidget() {
           "studies": [],
           "autosize": true
         }`;
-      container.current.appendChild(script);
+      if (container.current && !container.current.hasChildNodes()) {
+        container.current.appendChild(script);
+      }
     },
     []
   );

@@ -33,11 +33,11 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 // Extended sample data for trades page
-const allTradesData = [
+const allTradesData: Trade[] = [
   {
     id: '1',
     symbol: 'EURUSD',
-    direction: 'long',
+    direction: 'long' as const,
     entry: 1.0875,
     exit: 1.0920,
     stopLoss: 1.0855,
@@ -57,7 +57,7 @@ const allTradesData = [
   {
     id: '2',
     symbol: 'GBPJPY',
-    direction: 'short',
+    direction: 'short' as const,
     entry: 189.45,
     exit: 188.92,
     stopLoss: 189.95,
@@ -77,7 +77,7 @@ const allTradesData = [
   {
     id: '3',
     symbol: 'XAUUSD',
-    direction: 'long',
+    direction: 'long' as const,
     entry: 2018.75,
     exit: 2025.30,
     stopLoss: 2010.00,
@@ -97,7 +97,7 @@ const allTradesData = [
   {
     id: '4',
     symbol: 'USDJPY',
-    direction: 'short',
+    direction: 'short' as const,
     entry: 149.85,
     exit: null,
     stopLoss: 150.35,
