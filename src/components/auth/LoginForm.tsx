@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Eye, EyeOff, Mail } from 'lucide-react';
-import { loginWithEmail, loginWithGoogle } from '@/lib/firebase/auth';
+import { useAuth } from '@/hooks/useSupabaseAuth';
 import { toast } from '@/components/ui/use-toast';
 
 interface LoginFormProps {
@@ -18,22 +18,25 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await loginWithEmail(email, password);
+      const { error } = await signIn(email, password);
+      if (error) throw error;
+      
       toast({
         title: 'Login successful',
         description: 'Welcome back to your trading dashboard!',
       });
-      navigate('/dashboard'); // Only navigate after successful login
+      navigate('/dashboard');
     } catch (error: any) {
       toast({
         title: 'Login failed',
-        description: error.message || 'Something went wrong',
+        description: error.message || 'Invalid email or password',
         variant: 'destructive',
       });
     } finally {
@@ -44,16 +47,10 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
+      // Google auth not set up yet
       toast({
-        title: 'Google login successful',
-        description: 'Welcome to your trading dashboard!',
-      });
-      navigate('/dashboard'); // Only after successful login
-    } catch (error: any) {
-      toast({
-        title: 'Google login failed',
-        description: error.message || 'Something went wrong',
+        title: 'Google Sign-In',
+        description: 'Google authentication is not configured yet. Please use email/password.',
         variant: 'destructive',
       });
     } finally {

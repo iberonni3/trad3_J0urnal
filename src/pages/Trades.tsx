@@ -29,7 +29,7 @@ import {
 import { Plus, Search, Filter, Download, ArrowUpRight, ArrowDownRight, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { useTrades, useCreateTrade } from '@/hooks/useTrades';
+import { useTrades, useCreateTrade } from '@/hooks/useSupabaseTrades';
 import { Trade, TradeInput } from '@/types/trade';
 import TradeEntryForm from '@/components/trades/TradeEntryForm';
 

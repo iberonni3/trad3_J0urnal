@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, TrendingUp, Mail } from 'lucide-react';
-import { signUpWithEmail, loginWithGoogle } from '@/lib/firebase/auth';
+import { useAuth } from '@/hooks/useSupabaseAuth';
 import { toast } from '@/components/ui/use-toast';
 
 interface SignUpFormProps {
@@ -27,6 +27,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,29 +53,32 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
     setIsLoading(true);
     
     try {
-      await signUpWithEmail(formData.email, formData.password);
+      const { error } = await signUp(formData.email, formData.password);
       
-      toast({
-        title: 'Verification Email Sent!',
-        description: 'Please check your inbox and verify your email to continue.',
-        duration: 10000, // Longer duration for important message
-      });
-      
-      navigate('/verify-email-instructions', {
-        state: { email: formData.email } // Pass email for potential resend
-      });
-      
-    } catch (error) {
-      let errorMessage = 'Signup failed. Please try again.';
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already registered. Try signing in.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password should be at least 6 characters';
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast({
+            title: 'Account exists',
+            description: 'This email is already registered. Please sign in instead.',
+            variant: 'destructive',
+          });
+        } else {
+          throw error;
+        }
+        return;
       }
       
       toast({
+        title: 'Account created!',
+        description: 'You can now sign in to your trading journal.',
+      });
+      
+      navigate('/dashboard');
+      
+    } catch (error: any) {
+      toast({
         title: 'Signup Failed',
-        description: errorMessage,
+        description: error.message || 'Failed to create account',
         variant: 'destructive',
       });
     } finally {
@@ -85,16 +89,10 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
+      // Google auth not set up yet
       toast({
-        title: 'Signup Successful!',
-        description: 'Welcome to your trading journal!',
-      });
-      navigate('/dashboard');
-    } catch (error) {
-      toast({
-        title: 'Google Signup Failed',
-        description: error.message,
+        title: 'Google Sign-Up',
+        description: 'Google authentication is not configured yet. Please use email/password.',
         variant: 'destructive',
       });
     } finally {
