@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Eye, EyeOff, Mail } from 'lucide-react';
-import { useAuth } from '@/hooks/useSupabaseAuth';
+import { loginWithEmail, loginWithGoogle } from '@/lib/firebase/auth';
 import { toast } from '@/components/ui/use-toast';
 
 interface LoginFormProps {
@@ -18,25 +18,22 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
-      if (error) throw error;
-      
+      await loginWithEmail(email, password);
       toast({
         title: 'Login successful',
         description: 'Welcome back to your trading dashboard!',
       });
-      navigate('/dashboard');
+      navigate('/dashboard'); // Only navigate after successful login
     } catch (error: any) {
       toast({
         title: 'Login failed',
-        description: error.message || 'Invalid email or password',
+        description: error.message || 'Something went wrong',
         variant: 'destructive',
       });
     } finally {
@@ -47,10 +44,16 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      // Google auth not set up yet
+      await loginWithGoogle();
       toast({
-        title: 'Google Sign-In',
-        description: 'Google authentication is not configured yet. Please use email/password.',
+        title: 'Google login successful',
+        description: 'Welcome to your trading dashboard!',
+      });
+      navigate('/dashboard'); // Only after successful login
+    } catch (error: any) {
+      toast({
+        title: 'Google login failed',
+        description: error.message || 'Something went wrong',
         variant: 'destructive',
       });
     } finally {
