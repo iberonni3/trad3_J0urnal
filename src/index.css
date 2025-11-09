@@ -82,8 +82,8 @@
     --sidebar-border: 263 20% 75%;
     --sidebar-ring: 270 91% 65%;
     
-    /* Popover colors - gradient themed */
-    --popover: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 245, 255, 0.8));
+    /* Popover colors - solid background */
+    --popover: 0 0% 100%;
     --popover-foreground: 263 30% 15%;
   }
 
@@ -377,7 +377,7 @@
   }
   
   :root .bg-popover {
-    background: var(--popover);
+    background: hsl(var(--popover)) !important;
   }
   
   :root .bg-sidebar-background {

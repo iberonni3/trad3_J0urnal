@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, enableNetwork } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -18,7 +18,16 @@ const app = initializeApp(firebaseConfig);
 console.log("Firebase App Initialized:", app); // Debug log
 
 export const auth = getAuth(app);
+
+// Initialize Firestore with explicit settings to work better with Brave
 export const db = getFirestore(app);
+
+// Try to enable network and handle errors gracefully
+enableNetwork(db).catch((error) => {
+  console.warn("Failed to enable Firestore network:", error);
+  // This might fail in Brave if Shields are blocking, but we'll try to continue
+});
+
 export const storage = getStorage(app);
 
 console.log("Firebase Services Initialized:", { auth, db, storage }); // Debug log
