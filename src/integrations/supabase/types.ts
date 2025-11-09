@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      trades: {
+        Row: {
+          broker: string | null
+          close_time: string | null
+          commission: number | null
+          created_at: string
+          direction: string
+          entry: number
+          exit: number | null
+          id: string
+          notes: string | null
+          open_time: string
+          pnl: number | null
+          quantity: number
+          r_multiple: number | null
+          screenshot_url: string | null
+          setup: string | null
+          status: string
+          stop_loss: number | null
+          symbol: string
+          tags: string[] | null
+          take_profit: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          broker?: string | null
+          close_time?: string | null
+          commission?: number | null
+          created_at?: string
+          direction: string
+          entry: number
+          exit?: number | null
+          id?: string
+          notes?: string | null
+          open_time: string
+          pnl?: number | null
+          quantity: number
+          r_multiple?: number | null
+          screenshot_url?: string | null
+          setup?: string | null
+          status?: string
+          stop_loss?: number | null
+          symbol: string
+          tags?: string[] | null
+          take_profit?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          broker?: string | null
+          close_time?: string | null
+          commission?: number | null
+          created_at?: string
+          direction?: string
+          entry?: number
+          exit?: number | null
+          id?: string
+          notes?: string | null
+          open_time?: string
+          pnl?: number | null
+          quantity?: number
+          r_multiple?: number | null
+          screenshot_url?: string | null
+          setup?: string | null
+          status?: string
+          stop_loss?: number | null
+          symbol?: string
+          tags?: string[] | null
+          take_profit?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
