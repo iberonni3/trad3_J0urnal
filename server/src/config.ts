@@ -8,5 +8,14 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
   firebaseServiceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
 };
-
-
+// ...existing code...
+if (config.firebaseServiceAccountJson) {
+  try {
+    JSON.parse(config.firebaseServiceAccountJson);
+    console.log('[server] FIREBASE_SERVICE_ACCOUNT_JSON provided and valid JSON');
+  } catch (err) {
+    console.error('[server] FIREBASE_SERVICE_ACCOUNT_JSON is invalid JSON:', err);
+  }
+} else {
+  console.log('[server] FIREBASE_SERVICE_ACCOUNT_JSON not provided');
+}

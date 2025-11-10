@@ -1,15 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -17,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -26,21 +18,55 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Search, Filter, Download, ArrowUpRight, ArrowDownRight, Eye } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Search, Download, ArrowUpRight, ArrowDownRight, Eye, Trash2, ImageIcon, LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { useTrades, useCreateTrade } from '@/hooks/useTrades';
+import { useTrades, useCreateTrade, useDeleteTrade } from '@/hooks/useTrades';
 import { Trade, TradeInput } from '@/types/trade';
 import TradeEntryForm from '@/components/trades/TradeEntryForm';
 
 export default function Trades() {
   const navigate = useNavigate();
   const { data: allTrades = [], isLoading: isLoadingTrades } = useTrades();
-  const createTrade = useCreateTrade();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDirection, setFilterDirection] = useState('all');
   const [isAddTradeOpen, setIsAddTradeOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'gallery' | 'table'>('gallery');
+  const [tradeToDelete, setTradeToDelete] = useState<Trade | null>(null);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+
+  const createTrade = useCreateTrade(() => setIsAddTradeOpen(false));
+  const deleteTrade = useDeleteTrade();
+
+  // Debugging: Log trades data
+  useEffect(() => {
+    console.group('🔍 Trades Debugging');
+    console.log('Total trades:', allTrades?.length);
+    console.log('Filtered trades:', filteredTrades.length);
+    
+    filteredTrades.forEach((trade, index) => {
+      console.log(`Trade ${index + 1} (${trade.symbol}):`, {
+        id: trade.id,
+        symbol: trade.symbol,
+        hasScreenshotUrl: !!trade.screenshotUrl,
+        screenshotUrl: trade.screenshotUrl,
+        screenshotUrlLength: trade.screenshotUrl?.length,
+      });
+    });
+    
+    console.groupEnd();
+  }, [allTrades]);
 
   const filteredTrades = (allTrades || []).filter(trade => {
     const matchesSearch = trade.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -95,14 +121,13 @@ export default function Trades() {
   };
 
   const handleAddTrade = async (tradeInput: TradeInput) => {
-    try {
-      console.log('handleAddTrade called with:', tradeInput);
-      await createTrade.mutateAsync(tradeInput);
-      setIsAddTradeOpen(false);
-    } catch (error) {
-      console.error('Error in handleAddTrade:', error);
-      // Error is handled by the mutation's onError callback
-      // Don't close the dialog if there's an error
+    await createTrade.mutateAsync(tradeInput);
+  };
+
+  const handleDeleteTrade = async () => {
+    if (tradeToDelete) {
+      await deleteTrade.mutateAsync(tradeToDelete.id);
+      setTradeToDelete(null);
     }
   };
 
@@ -143,8 +168,9 @@ export default function Trades() {
     );
   };
 
-  const handleViewTrade = (trade: Trade) => {
-    navigate('/charts', { state: { trade } });
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
@@ -192,10 +218,30 @@ export default function Trades() {
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Trade Filters</CardTitle>
-          <CardDescription>
-            Filter and search through your trades
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Trade Filters</CardTitle>
+              <CardDescription>
+                Filter and search through your trades
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'gallery' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('gallery')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
@@ -232,124 +278,353 @@ export default function Trades() {
                 <SelectItem value="short">Short</SelectItem>
               </SelectContent>
             </Select>
-
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Trades Table */}
+      {/* Trades Gallery/Table View */}
       <Card>
         <CardHeader>
           <CardTitle>All Trades ({filteredTrades.length})</CardTitle>
           <CardDescription>
-            Complete trading history with performance metrics
+            {viewMode === 'gallery' ? 'Visual gallery of your trades' : 'Complete trading history with performance metrics'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="responsive-table-container">
-            <Table className="responsive-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Symbol</TableHead>
-                  <TableHead>Direction</TableHead>
-                  <TableHead>Entry</TableHead>
-                  <TableHead>Exit</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>P&L</TableHead>
-                  <TableHead>R Multiple</TableHead>
-                  <TableHead>Setup</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingTrades ? (
-                  <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        <span className="text-muted-foreground">Loading trades...</span>
+          {isLoadingTrades ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="text-muted-foreground">Loading trades...</span>
+              </div>
+            </div>
+          ) : filteredTrades.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No trades found</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {searchTerm || filterStatus !== 'all' || filterDirection !== 'all'
+                  ? 'Try adjusting your filters'
+                  : 'Add your first trade to get started'}
+              </p>
+            </div>
+          ) : viewMode === 'gallery' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTrades.map((trade) => (
+                <Card key={trade.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  {/* Screenshot Preview with Error Handling */}
+                  <div 
+                    className="relative h-48 bg-muted cursor-pointer"
+                    onClick={() => setSelectedTrade(trade)}
+                  >
+                    {trade.screenshotUrl ? (
+                      <>
+                        <img
+                          src={trade.screenshotUrl}
+                          alt={`${trade.symbol} chart`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error('❌ Image load error for trade:', trade.id, trade.screenshotUrl);
+                            // Hide the broken image
+                            e.currentTarget.style.display = 'none';
+                            // Show the placeholder instead
+                            const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (placeholder) placeholder.style.display = 'flex';
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Image loaded successfully for trade:', trade.id);
+                          }}
+                        />
+                        <div className="w-full h-full items-center justify-center hidden flex-col">
+                          <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+                          <p className="text-xs text-muted-foreground mt-2">Image failed to load</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <ImageIcon className="h-12 w-12 text-muted-foreground/30 mx-auto" />
+                          <p className="text-xs text-muted-foreground mt-2">No screenshot</p>
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredTrades.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8">
-                      <p className="text-muted-foreground">No trades found</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {searchTerm || filterStatus !== 'all' || filterDirection !== 'all'
-                          ? 'Try adjusting your filters'
-                          : 'Add your first trade to get started'}
-                      </p>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredTrades.map((trade) => (
-                  <TableRow key={trade.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">
-                      {trade.symbol}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getDirectionIcon(trade.direction)}
-                        <span className="capitalize">{trade.direction}</span>
+                    )}
+                    <div className="absolute top-2 right-2">
+                      {getStatusBadge(trade.status)}
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                      <div className="flex items-center justify-between text-white">
+                        <div className="flex items-center gap-2">
+                          {getDirectionIcon(trade.direction)}
+                          <span className="font-bold text-lg">{trade.symbol}</span>
+                        </div>
+                        <span className={cn('font-bold', getPnLColor(trade.pnl))}>
+                          {formatPnL(trade.pnl)}
+                        </span>
                       </div>
-                    </TableCell>
-                    <TableCell>{trade.entry.toFixed(trade.symbol.includes('JPY') ? 2 : 4)}</TableCell>
-                    <TableCell>
-                      {trade.exit ? trade.exit.toFixed(trade.symbol.includes('JPY') ? 2 : 4) : '-'}
-                    </TableCell>
-                    <TableCell>{trade.quantity}</TableCell>
-                    <TableCell className={cn('font-medium', getPnLColor(trade.pnl))}>
-                      {formatPnL(trade.pnl)}
-                    </TableCell>
-                    <TableCell className={cn('font-medium', getPnLColor(trade.pnl))}>
-                      {formatRMultiple(trade.rMultiple)}
-                    </TableCell>
-                    <TableCell>
+                    </div>
+                  </div>
+
+                  {/* Trade Details */}
+                  <CardContent className="p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Entry</p>
+                        <p className="font-medium">{trade.entry.toFixed(trade.symbol.includes('JPY') ? 2 : 4)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Exit</p>
+                        <p className="font-medium">
+                          {trade.exit ? trade.exit.toFixed(trade.symbol.includes('JPY') ? 2 : 4) : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">R Multiple</p>
+                        <p className={cn('font-medium', getPnLColor(trade.pnl))}>
+                          {formatRMultiple(trade.rMultiple)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Date</p>
+                        <p className="font-medium">{formatDate(trade.openTime)}</p>
+                      </div>
+                    </div>
+
+                    <div>
                       <Badge variant="outline" className="text-xs">
                         {trade.setup}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 flex-wrap">
-                        {trade.tags.slice(0, 2).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {trade.tags.length > 2 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{trade.tags.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(trade.status)}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleViewTrade(trade)}
-                        className="hover:bg-primary/10 hover:text-primary"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Chart
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    </div>
+
+                    <div className="flex gap-1 flex-wrap">
+                      {trade.tags.slice(0, 3).map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {trade.tags.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{trade.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+
+                  {/* Actions */}
+                  <CardFooter className="p-4 pt-0 flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setSelectedTrade(trade)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => setTradeToDelete(trade)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            // Table View
+            <div className="responsive-table-container">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 font-medium">Symbol</th>
+                    <th className="text-left p-3 font-medium">Direction</th>
+                    <th className="text-left p-3 font-medium">Entry</th>
+                    <th className="text-left p-3 font-medium">Exit</th>
+                    <th className="text-left p-3 font-medium">P&L</th>
+                    <th className="text-left p-3 font-medium">R Multiple</th>
+                    <th className="text-left p-3 font-medium">Setup</th>
+                    <th className="text-left p-3 font-medium">Status</th>
+                    <th className="text-left p-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTrades.map((trade) => (
+                    <tr key={trade.id} className="border-b hover:bg-muted/50">
+                      <td className="p-3 font-medium">{trade.symbol}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          {getDirectionIcon(trade.direction)}
+                          <span className="capitalize">{trade.direction}</span>
+                        </div>
+                      </td>
+                      <td className="p-3">{trade.entry.toFixed(trade.symbol.includes('JPY') ? 2 : 4)}</td>
+                      <td className="p-3">
+                        {trade.exit ? trade.exit.toFixed(trade.symbol.includes('JPY') ? 2 : 4) : '-'}
+                      </td>
+                      <td className={cn('p-3 font-medium', getPnLColor(trade.pnl))}>
+                        {formatPnL(trade.pnl)}
+                      </td>
+                      <td className={cn('p-3 font-medium', getPnLColor(trade.pnl))}>
+                        {formatRMultiple(trade.rMultiple)}
+                      </td>
+                      <td className="p-3">
+                        <Badge variant="outline" className="text-xs">
+                          {trade.setup}
+                        </Badge>
+                      </td>
+                      <td className="p-3">{getStatusBadge(trade.status)}</td>
+                      <td className="p-3">
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setSelectedTrade(trade)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => setTradeToDelete(trade)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!tradeToDelete} onOpenChange={(open) => !open && setTradeToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Trade</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the trade for {tradeToDelete?.symbol}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTrade}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Trade Detail Dialog */}
+      <Dialog open={!!selectedTrade} onOpenChange={(open) => !open && setSelectedTrade(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedTrade && (
+                <>
+                  {getDirectionIcon(selectedTrade.direction)}
+                  <span>{selectedTrade.symbol}</span>
+                  {getStatusBadge(selectedTrade.status)}
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              Trade details and chart screenshot
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedTrade && (
+            <div className="space-y-6">
+              {/* Screenshot */}
+              {selectedTrade.screenshotUrl && (
+                <div className="rounded-lg overflow-hidden border">
+                  <img
+                    src={selectedTrade.screenshotUrl}
+                    alt={`${selectedTrade.symbol} chart`}
+                    className="w-full h-auto"
+                  />
+                </div>
+              )}
+
+              {/* Trade Details Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Entry Price</p>
+                  <p className="text-lg font-semibold">{selectedTrade.entry.toFixed(5)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Exit Price</p>
+                  <p className="text-lg font-semibold">
+                    {selectedTrade.exit ? selectedTrade.exit.toFixed(5) : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Quantity</p>
+                  <p className="text-lg font-semibold">{selectedTrade.quantity} lots</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Stop Loss</p>
+                  <p className="text-lg font-semibold">{selectedTrade.stopLoss.toFixed(5)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Take Profit</p>
+                  <p className="text-lg font-semibold">{selectedTrade.takeProfit.toFixed(5)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">P&L</p>
+                  <p className={cn('text-lg font-semibold', getPnLColor(selectedTrade.pnl))}>
+                    {formatPnL(selectedTrade.pnl)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">R Multiple</p>
+                  <p className={cn('text-lg font-semibold', getPnLColor(selectedTrade.pnl))}>
+                    {formatRMultiple(selectedTrade.rMultiple)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Setup</p>
+                  <p className="text-lg font-semibold">{selectedTrade.setup}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Broker</p>
+                  <p className="text-lg font-semibold">{selectedTrade.broker}</p>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {selectedTrade.tags.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Tags</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {selectedTrade.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedTrade.notes && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Notes</p>
+                  <p className="text-sm bg-muted p-4 rounded-lg">{selectedTrade.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

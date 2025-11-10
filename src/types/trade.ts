@@ -5,7 +5,7 @@ export interface Trade {
   id: string;
   userId: string;
   symbol: string;
-  direction: TradeDirection;
+  direction: 'long' | 'short';
   entry: number;
   exit: number | null;
   stopLoss: number;
@@ -15,35 +15,36 @@ export interface Trade {
   rMultiple: number;
   openTime: Date | string;
   closeTime: Date | string | null;
-  status: TradeStatus;
+  status: 'open' | 'closed';
   setup: string;
   tags: string[];
   broker: string;
   commission: number;
   notes: string;
-  screenshotUrl?: string;
+  screenshotUrl?: string; // Screenshot URL field
   createdAt: Date | string;
   updatedAt: Date | string;
 }
 
 export interface TradeInput {
   symbol: string;
-  direction: TradeDirection;
+  direction: 'long' | 'short';
   entry: number;
-  exit?: number | null;
+  exit: number | null;
   stopLoss: number;
   takeProfit: number;
   quantity: number;
   pnl?: number;
-  openTime: Date | string;
-  closeTime?: Date | string | null;
-  status: TradeStatus;
+  openTime: Date;
+  closeTime: Date | null;
+  status: 'open' | 'closed';
   setup: string;
   tags: string[];
   broker: string;
   commission: number;
   notes: string;
   screenshot?: File;
+  screenshotUrl?: string;
 }
 
 export interface JournalEntry {

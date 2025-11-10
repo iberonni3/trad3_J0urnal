@@ -26,6 +26,13 @@ import { cn } from '@/lib/utils';
 import { TradeInput } from '@/types/trade';
 import { validateImageFile } from '@/lib/firebase/storage';
 
+// Helper function to convert empty strings to undefined for number fields
+const emptyStringToUndefined = (value: any) => {
+  if (value === '' || value === null) return undefined;
+  const num = Number(value);
+  return isNaN(num) ? undefined : num;
+};
+
 // Form validation schema
 const tradeFormSchema = z.object({
   symbol: z.string().min(1, 'Symbol is required').toUpperCase(),
@@ -36,7 +43,7 @@ const tradeFormSchema = z.object({
     required_error: 'Entry price is required',
     invalid_type_error: 'Entry price must be a number',
   }).positive('Entry price must be positive'),
-  exit: z.number().positive('Exit price must be positive').optional().nullable(),
+  exit: z.number().positive('Exit price must be positive').optional(),
   stopLoss: z.number({
     required_error: 'Stop loss is required',
     invalid_type_error: 'Stop loss must be a number',
@@ -49,28 +56,24 @@ const tradeFormSchema = z.object({
     required_error: 'Quantity is required',
     invalid_type_error: 'Quantity must be a number',
   }).positive('Quantity must be positive'),
-  pnl: z.union([
-    z.number({
-      invalid_type_error: 'P&L must be a number',
-    }),
-    z.undefined(),
-    z.null(),
-  ]).optional(),
+  pnl: z.number({
+    invalid_type_error: 'P&L must be a number',
+  }).optional(),
   openTime: z.date({
     required_error: 'Open time is required',
   }),
-  closeTime: z.date().optional().nullable(),
+  closeTime: z.date().optional(),
   status: z.enum(['open', 'closed']),
   setup: z.string().min(1, 'Setup is required'),
   tags: z.string(),
   broker: z.string().min(1, 'Broker is required'),
-  commission: z.number().nonnegative('Commission cannot be negative').default(0),
+  commission: z.number().nonnegative('Commission cannot be negative').optional(),
   notes: z.string().default(''),
 }).refine((data) => {
   // If status is closed, exit price and close time are required
   if (data.status === 'closed') {
-    const hasExit = data.exit !== null && data.exit !== undefined && !isNaN(Number(data.exit)) && Number(data.exit) > 0;
-    const hasCloseTime = data.closeTime !== null && data.closeTime !== undefined;
+    const hasExit = data.exit !== undefined && data.exit > 0;
+    const hasCloseTime = data.closeTime !== undefined;
     return hasExit && hasCloseTime;
   }
   return true;
@@ -80,7 +83,7 @@ const tradeFormSchema = z.object({
 }).refine((data) => {
   // If status is closed, P&L is required (must be a valid number, can be 0 or negative)
   if (data.status === 'closed') {
-    return data.pnl !== undefined && data.pnl !== null && !isNaN(Number(data.pnl));
+    return data.pnl !== undefined;
   }
   return true;
 }, {
@@ -135,23 +138,23 @@ export default function TradeEntryForm({
     formState: { errors, isSubmitting },
   } = useForm<TradeFormValues>({
     resolver: zodResolver(tradeFormSchema),
-    mode: 'onChange', // Validate on change to show errors immediately
+    mode: 'onChange',
     defaultValues: {
       symbol: initialData?.symbol || '',
       direction: initialData?.direction || 'long',
       entry: initialData?.entry || undefined,
-      exit: initialData?.exit || null,
+      exit: initialData?.exit || undefined,
       stopLoss: initialData?.stopLoss || undefined,
       takeProfit: initialData?.takeProfit || undefined,
       quantity: initialData?.quantity || undefined,
       pnl: initialData?.pnl || undefined,
       openTime: initialData?.openTime ? new Date(initialData.openTime) : new Date(),
-      closeTime: initialData?.closeTime ? new Date(initialData.closeTime) : null,
+      closeTime: initialData?.closeTime ? new Date(initialData.closeTime) : undefined,
       status: initialData?.status || 'open',
       setup: initialData?.setup || '',
       tags: initialData?.tags?.join(', ') || '',
       broker: initialData?.broker || '',
-      commission: initialData?.commission || 0,
+      commission: initialData?.commission || undefined,
       notes: initialData?.notes || '',
     },
   });
@@ -190,52 +193,36 @@ export default function TradeEntryForm({
   };
 
   const onFormSubmit = async (data: TradeFormValues) => {
-    try {
-      console.log('Form submission started with data:', data);
-      
-      // Handle P&L - convert empty string to undefined, handle NaN
-      let pnlValue: number | undefined = undefined;
-      if (data.pnl !== undefined && data.pnl !== null && !isNaN(data.pnl)) {
-        pnlValue = data.pnl;
-      } else if (data.status === 'closed') {
-        // For closed trades, if P&L is not provided, default to 0
-        pnlValue = 0;
-      }
-      
-      const tradeInput: TradeInput = {
-        symbol: data.symbol.toUpperCase(),
-        direction: data.direction,
-        entry: data.entry,
-        exit: data.exit || null,
-        stopLoss: data.stopLoss,
-        takeProfit: data.takeProfit,
-        quantity: data.quantity,
-        pnl: pnlValue,
-        openTime: data.openTime,
-        closeTime: data.closeTime || null,
-        status: data.status,
-        setup: data.setup,
-        tags: data.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        broker: data.broker,
-        commission: data.commission || 0,
-        notes: data.notes || '',
-        screenshot: screenshot || undefined,
-      };
+    console.log('Form submission started with data:', data);
+    
+    const tradeInput: TradeInput = {
+      symbol: data.symbol.toUpperCase(),
+      direction: data.direction,
+      entry: data.entry,
+      exit: data.exit || null,
+      stopLoss: data.stopLoss,
+      takeProfit: data.takeProfit,
+      quantity: data.quantity,
+      pnl: data.pnl,
+      openTime: data.openTime,
+      closeTime: data.closeTime || null,
+      status: data.status,
+      setup: data.setup,
+      tags: data.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      broker: data.broker,
+      commission: data.commission || 0,
+      notes: data.notes || '',
+      screenshot: screenshot || undefined,
+    };
 
-      console.log('Trade input prepared:', tradeInput);
-      await onSubmit(tradeInput);
-      console.log('Form submission completed successfully');
-    } catch (error) {
-      console.error('Error submitting trade form:', error);
-      // Error handling is done in the parent component via the mutation's onError
-      throw error; // Re-throw to let the form handle it
-    }
+    console.log('Trade input prepared:', tradeInput);
+    await onSubmit(tradeInput);
+    console.log('Form submission completed successfully');
   };
 
   const onFormError = (errors: any) => {
     console.error('Form validation errors:', errors);
     console.error('Form errors object:', JSON.stringify(errors, null, 2));
-    // Don't show alert for validation errors - they're shown in the form
   };
 
   return (
@@ -334,7 +321,9 @@ export default function TradeEntryForm({
               type="number"
               step="0.00001"
               placeholder="1.08750"
-              {...register('entry', { valueAsNumber: true })}
+              {...register('entry', { 
+                setValueAs: emptyStringToUndefined
+              })}
               className={cn(errors.entry && 'border-destructive')}
             />
             {errors.entry && (
@@ -351,7 +340,9 @@ export default function TradeEntryForm({
               type="number"
               step="0.01"
               placeholder="1.00"
-              {...register('quantity', { valueAsNumber: true })}
+              {...register('quantity', { 
+                setValueAs: emptyStringToUndefined
+              })}
               className={cn(errors.quantity && 'border-destructive')}
             />
             {errors.quantity && (
@@ -368,7 +359,9 @@ export default function TradeEntryForm({
               type="number"
               step="0.00001"
               placeholder="1.08550"
-              {...register('stopLoss', { valueAsNumber: true })}
+              {...register('stopLoss', { 
+                setValueAs: emptyStringToUndefined
+              })}
               className={cn(errors.stopLoss && 'border-destructive')}
             />
             {errors.stopLoss && (
@@ -385,7 +378,9 @@ export default function TradeEntryForm({
               type="number"
               step="0.00001"
               placeholder="1.09200"
-              {...register('takeProfit', { valueAsNumber: true })}
+              {...register('takeProfit', { 
+                setValueAs: emptyStringToUndefined
+              })}
               className={cn(errors.takeProfit && 'border-destructive')}
             />
             {errors.takeProfit && (
@@ -403,7 +398,9 @@ export default function TradeEntryForm({
                 type="number"
                 step="0.00001"
                 placeholder="1.09200"
-                {...register('exit', { valueAsNumber: true })}
+                {...register('exit', { 
+                  setValueAs: emptyStringToUndefined
+                })}
                 className={cn(errors.exit && 'border-destructive')}
               />
               {errors.exit && (
@@ -422,14 +419,7 @@ export default function TradeEntryForm({
               step="0.01"
               placeholder="0.00"
               {...register('pnl', { 
-                valueAsNumber: true,
-                setValueAs: (value) => {
-                  if (value === '' || value === null || value === undefined) {
-                    return undefined;
-                  }
-                  const num = Number(value);
-                  return isNaN(num) ? undefined : num;
-                }
+                setValueAs: emptyStringToUndefined
               })}
               className={cn(errors.pnl && 'border-destructive')}
             />
@@ -446,16 +436,15 @@ export default function TradeEntryForm({
           <div className="space-y-2">
             <Label htmlFor="commission">
               Commission (Optional)
-              <span className="text-xs text-muted-foreground ml-2">
-                Broker fees charged for the trade
-              </span>
             </Label>
             <Input
               id="commission"
               type="number"
               step="0.01"
               placeholder="0.00"
-              {...register('commission', { valueAsNumber: true })}
+              {...register('commission', { 
+                setValueAs: emptyStringToUndefined
+              })}
               className={cn(errors.commission && 'border-destructive')}
             />
             {errors.commission && (
@@ -547,7 +536,7 @@ export default function TradeEntryForm({
                   <Calendar
                     mode="single"
                     selected={closeTime || undefined}
-                    onSelect={(date) => setValue('closeTime', date || null)}
+                    onSelect={(date) => setValue('closeTime', date || undefined)}
                     initialFocus
                   />
                   <div className="p-3 border-t">
@@ -678,30 +667,6 @@ export default function TradeEntryForm({
 
       {/* Form Actions */}
       <div className="flex flex-col gap-3 pt-4 border-t">
-        {/* Display all form errors at the bottom */}
-        {Object.keys(errors).length > 0 && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4">
-            <p className="text-sm font-semibold text-destructive mb-2">
-              Please fix the following errors:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-sm text-destructive">
-              {errors.symbol && <li>Symbol: {errors.symbol.message as string}</li>}
-              {errors.direction && <li>Direction: {errors.direction.message as string}</li>}
-              {errors.entry && <li>Entry Price: {errors.entry.message as string}</li>}
-              {errors.exit && <li>Exit Price: {errors.exit.message as string}</li>}
-              {errors.stopLoss && <li>Stop Loss: {errors.stopLoss.message as string}</li>}
-              {errors.takeProfit && <li>Take Profit: {errors.takeProfit.message as string}</li>}
-              {errors.quantity && <li>Quantity: {errors.quantity.message as string}</li>}
-              {errors.pnl && <li>P&L: {errors.pnl.message as string}</li>}
-              {errors.openTime && <li>Open Time: {errors.openTime.message as string}</li>}
-              {errors.closeTime && <li>Close Time: {errors.closeTime.message as string}</li>}
-              {errors.status && <li>Status: {errors.status.message as string}</li>}
-              {errors.setup && <li>Setup: {errors.setup.message as string}</li>}
-              {errors.broker && <li>Broker: {errors.broker.message as string}</li>}
-              {errors.commission && <li>Commission: {errors.commission.message as string}</li>}
-            </ul>
-          </div>
-        )}
         <div className="flex justify-end gap-3">
           <Button
             type="button"
@@ -714,15 +679,6 @@ export default function TradeEntryForm({
           <Button 
             type="submit" 
             disabled={isLoading || isSubmitting}
-            onClick={(e) => {
-              console.log('Submit button clicked');
-              console.log('Form errors:', errors);
-              console.log('Form state:', { isLoading, isSubmitting });
-              console.log('Error count:', Object.keys(errors).length);
-              if (Object.keys(errors).length > 0) {
-                console.warn('Form has validation errors, submission may be blocked');
-              }
-            }}
           >
             {(isLoading || isSubmitting) ? (
               <>
