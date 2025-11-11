@@ -8,8 +8,8 @@ import {
   updateTrade,
   deleteTrade,
   closeTrade,
-} from '@/lib/firestore/trades';
-import { uploadTradeScreenshot } from '@/lib/firebase/storage';
+} from '@/lib/supabase/trades';
+import { uploadTradeScreenshot } from '@/lib/supabase/storage';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -46,49 +46,34 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
       console.group('📝 Creating Trade');
       console.log('Trade Input:', tradeInput);
       console.log('Has Screenshot:', !!tradeInput.screenshot);
-      console.log('User UID:', user.uid);
+      console.log('User ID:', user.id);
       
       try {
         // Create the trade first to get the trade ID
-        console.log('Step 1: Creating trade document...');
-        const tradeId = await createTrade(user.uid, tradeInput);
+        console.log('Step 1: Creating trade in database...');
+        const tradeId = await createTrade(user.id, tradeInput);
         console.log('✅ Trade created successfully with ID:', tradeId);
         
-        // Upload screenshot if provided (non-blocking - continue even if upload fails)
+        // Upload screenshot if provided
         if (tradeInput.screenshot) {
           console.log('Step 2: Uploading screenshot...');
-          console.log('Screenshot file details:', {
-            name: tradeInput.screenshot.name,
-            size: tradeInput.screenshot.size,
-            type: tradeInput.screenshot.type,
-          });
           
           try {
             const screenshotUrl = await uploadTradeScreenshot(
               tradeInput.screenshot,
-              user.uid,
+              user.id,
               tradeId
             );
             console.log('✅ Screenshot uploaded successfully');
-            console.log('Screenshot URL:', screenshotUrl);
             
             // Update the trade with the screenshot URL
             console.log('Step 3: Updating trade with screenshot URL...');
-            await updateTrade(user.uid, tradeId, { screenshotUrl } as any);
+            await updateTrade(user.id, tradeId, { screenshotUrl } as any);
             console.log('✅ Trade updated with screenshot URL');
-            
-            // Add a small delay to ensure Firestore processes the update
-            await new Promise(resolve => setTimeout(resolve, 500));
-            console.log('Step 4: Waiting for Firestore sync...');
             
           } catch (screenshotError) {
             console.error('❌ Error uploading screenshot:', screenshotError);
-            console.error('Screenshot error details:', {
-              message: screenshotError instanceof Error ? screenshotError.message : 'Unknown error',
-              stack: screenshotError instanceof Error ? screenshotError.stack : undefined,
-            });
             
-            // Show warning toast but don't fail the operation
             toast({
               title: 'Warning',
               description: 'Trade created but screenshot upload failed. You can edit the trade to add a screenshot later.',
@@ -104,10 +89,6 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
         return tradeId;
       } catch (error) {
         console.error('❌ Error in createTrade mutation:', error);
-        console.error('Error details:', {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-        });
         console.groupEnd();
         throw error;
       }
@@ -126,29 +107,11 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
     },
     onError: (error: Error) => {
       console.error('❌ Create trade error:', error);
-      
-      // Check if it's a blocked request error
-      const errorMessage = error.message || '';
-      const isBrave = /Brave/i.test(navigator.userAgent);
-      
-      if (errorMessage.includes('blocked') || errorMessage.includes('ERR_BLOCKED_BY_CLIENT') || errorMessage.includes('network')) {
-        const description = isBrave
-          ? 'Brave Shields is blocking Firestore. Click the shield icon in the address bar and disable Shields for this site, then refresh.'
-          : 'Your browser or an extension is blocking Firestore requests. Please disable ad blockers or privacy extensions and try again.';
-        
-        toast({
-          title: 'Connection Blocked',
-          description: description,
-          variant: 'destructive',
-          duration: 15000,
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: error.message || 'Failed to create trade',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create trade',
+        variant: 'destructive',
+      });
     },
   });
 };

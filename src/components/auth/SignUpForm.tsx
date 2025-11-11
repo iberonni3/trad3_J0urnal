@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, TrendingUp, Mail } from 'lucide-react';
-import { signUpWithEmail, loginWithGoogle } from '@/lib/firebase/auth';
-import { toast } from '@/components/ui/use-toast';
+import { signUpWithEmail, signInWithGoogle } from '@/lib/supabase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface SignUpFormProps {
   onToggleForm: () => void;
@@ -27,6 +27,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,29 +53,36 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
     setIsLoading(true);
     
     try {
-      await signUpWithEmail(formData.email, formData.password);
+      const { error } = await signUpWithEmail(
+        formData.email, 
+        formData.password,
+        formData.firstName,
+        formData.lastName
+      );
       
-      toast({
-        title: 'Verification Email Sent!',
-        description: 'Please check your inbox and verify your email to continue.',
-        duration: 10000, // Longer duration for important message
-      });
-      
-      navigate('/verify-email-instructions', {
-        state: { email: formData.email } // Pass email for potential resend
-      });
-      
-    } catch (error) {
-      let errorMessage = 'Signup failed. Please try again.';
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already registered. Try signing in.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password should be at least 6 characters';
+      if (error) {
+        let errorMessage = 'Signup failed. Please try again.';
+        if (error.message.includes('already registered')) {
+          errorMessage = 'This email is already registered. Try signing in.';
+        }
+        
+        toast({
+          title: 'Signup Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Success!',
+          description: 'Account created successfully! You can now sign in.',
+        });
+        navigate('/dashboard');
       }
       
+    } catch (error: any) {
       toast({
         title: 'Signup Failed',
-        description: errorMessage,
+        description: error.message || 'Something went wrong',
         variant: 'destructive',
       });
     } finally {
@@ -85,13 +93,16 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
-      toast({
-        title: 'Signup Successful!',
-        description: 'Welcome to your trading journal!',
-      });
-      navigate('/dashboard');
-    } catch (error) {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        toast({
+          title: 'Google Signup Failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+      // OAuth redirects automatically
+    } catch (error: any) {
       toast({
         title: 'Google Signup Failed',
         description: error.message,

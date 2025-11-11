@@ -12,37 +12,30 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { EquityCurve } from '@/components/dashboard/EquityCurve';
 import { RecentTrades } from '@/components/dashboard/RecentTrades';
 import { TradingCalendarHeatmap } from '@/components/dashboard/TradingCalendarHeatmap';
-import { addDays, format, subMonths } from 'date-fns';
-
-// Generate realistic dummy data for heatmap
-const generateDummyCalendarData = () => {
-  const data = [];
-  const today = new Date();
-  const startDate = subMonths(today, 6); // 6 months of data
-  
-  let currentDate = new Date(startDate);
-  while (currentDate <= today) {
-    const dayOfWeek = currentDate.getDay();
-    
-    // Only generate data for weekdays (Mon-Fri)
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      const baseAmount = Math.random() * 300;
-      const isWin = Math.random() > 0.3; // 70% win rate
-      const profitLoss = isWin ? baseAmount : -baseAmount * 0.7;
-      
-      data.push({
-        date: format(currentDate, 'yyyy-MM-dd'),
-        profitLoss: Math.round(profitLoss)
-      });
-    }
-    currentDate = addDays(currentDate, 1);
-  }
-  
-  return data;
-};
+import { format, subMonths } from 'date-fns';
+import { useTrades } from '@/hooks/useTrades';
+import { useTradeMetrics } from '@/hooks/useTradeMetrics';
+import { formatCurrency, formatPercentage } from '@/lib/calculations';
 
 export default function Dashboard() {
-  const dummyCalendarData = generateDummyCalendarData();
+  const { data: trades, isLoading } = useTrades();
+  const metrics = useTradeMetrics(trades);
+
+  // Generate calendar data from actual trades
+  const calendarData = trades
+    ?.filter(t => t.status === 'closed' && t.closeTime)
+    .map(t => ({
+      date: format(new Date(t.closeTime!), 'yyyy-MM-dd'),
+      profitLoss: t.pnl
+    })) || [];
+
+  if (isLoading) {
+    return (
+      <div className="content-spacing">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="content-spacing">
@@ -58,33 +51,33 @@ export default function Dashboard() {
       <div className="responsive-grid">
         <StatCard
           title="Total Trades"
-          value="85"
-          change="+12 this month"
-          changeType="positive"
+          value={metrics.totalTrades.toString()}
+          change={`${metrics.openTrades} open, ${metrics.closedTrades} closed`}
+          changeType="neutral"
           icon={<BarChart3 className="h-6 w-6 text-primary" />}
-          description="Across all accounts"
+          description="All trades"
         />
         <StatCard
           title="Win Rate"
-          value="67.1%"
-          change="+2.3% vs last month"
-          changeType="positive"
+          value={formatPercentage(metrics.winRate)}
+          change={`${metrics.winningTrades} wins, ${metrics.losingTrades} losses`}
+          changeType={metrics.winRate >= 50 ? "positive" : "negative"}
           icon={<Target className="h-6 w-6 text-success" />}
-          description="57 wins, 28 losses"
+          description="Win percentage"
         />
         <StatCard
           title="Average R"
-          value="1.85R"
-          change="+0.15R improvement"
-          changeType="positive"
+          value={`${metrics.averageRMultiple.toFixed(2)}R`}
+          change="Risk-adjusted returns"
+          changeType={metrics.averageRMultiple > 0 ? "positive" : "negative"}
           icon={<Calculator className="h-6 w-6 text-primary" />}
-          description="Risk-adjusted returns"
+          description="Avg R-multiple"
         />
         <StatCard
           title="Total P&L"
-          value="$2,456.78"
-          change="+18.9% this month"
-          changeType="positive"
+          value={formatCurrency(metrics.totalPnL)}
+          change={metrics.totalPnL >= 0 ? "Profit" : "Loss"}
+          changeType={metrics.totalPnL >= 0 ? "positive" : "negative"}
           icon={<DollarSign className="h-6 w-6 text-success" />}
           description="Net profit/loss"
         />
@@ -94,35 +87,35 @@ export default function Dashboard() {
       <div className="responsive-grid">
         <StatCard
           title="Expectancy"
-          value="$28.91"
+          value={formatCurrency(metrics.expectancy)}
           change="Per trade average"
-          changeType="positive"
+          changeType={metrics.expectancy > 0 ? "positive" : "negative"}
           icon={<TrendingUp className="h-6 w-6 text-success" />}
           description="Expected value"
         />
         <StatCard
           title="Profit Factor"
-          value="1.67"
+          value={metrics.profitFactor === Infinity ? "∞" : metrics.profitFactor.toFixed(2)}
           change="Gross profit/loss ratio"
-          changeType="positive"
+          changeType={metrics.profitFactor > 1 ? "positive" : "negative"}
           icon={<Percent className="h-6 w-6 text-primary" />}
           description="Risk management"
         />
         <StatCard
           title="Avg Hold Time"
-          value="4h 32m"
-          change="-45m vs last month"
-          changeType="positive"
+          value={`${Math.floor(metrics.averageHoldTime)}h ${Math.round((metrics.averageHoldTime % 1) * 60)}m`}
+          change="Position duration"
+          changeType="neutral"
           icon={<Clock className="h-6 w-6 text-primary" />}
-          description="Position duration"
+          description="Average time"
         />
         <StatCard
           title="Max Drawdown"
-          value="-8.2%"
-          change="Current: -2.1%"
+          value={`-${metrics.maxDrawdown.toFixed(1)}%`}
+          change={`Current: -${metrics.currentDrawdown.toFixed(1)}%`}
           changeType="neutral"
           icon={<TrendingDown className="h-6 w-6 text-danger" />}
-          description="Peak-to-trough decline"
+          description="Peak-to-trough"
         />
       </div>
 
@@ -134,7 +127,7 @@ export default function Dashboard() {
         <div className="lg:col-span-1">
           <div className="trading-card section-padding flex flex-col">
             <div className="flex-1 min-h-[160px] sm:min-h-[180px]">
-              <TradingCalendarHeatmap data={dummyCalendarData} />
+              <TradingCalendarHeatmap data={calendarData} />
             </div>
             <div className="flex justify-center flex-wrap gap-2 sm:gap-4 mt-3 text-xs text-muted-foreground">
               <div className="flex items-center">

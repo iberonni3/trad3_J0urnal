@@ -13,36 +13,45 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { getAuth, onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+import { useAuth } from "@/hooks/useAuth";
+import { signOut } from "@/lib/supabase/auth";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/components/theme-provider";
+import { useToast } from "@/hooks/use-toast";
 
 export function TopNavigation() {
   const navigate = useNavigate();
-  const auth = getAuth();
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const { user } = useAuth();
   const { setTheme, theme } = useTheme();
-
-  // Listen for auth state changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, [auth]);
+  const { toast } = useToast();
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      navigate("/"); // redirect to AuthPage
+      const { error } = await signOut();
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       console.error("Logout error:", error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out',
+        variant: 'destructive',
+      });
     }
   };
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
   };
+
+  const userInitial = user?.email?.[0]?.toUpperCase() || "U";
 
   return (
     <header className="h-14 sm:h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -58,12 +67,6 @@ export function TopNavigation() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3">
-          {/* Live P&L */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-success-light border border-success/20">
-            <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-            <span className="text-sm font-medium text-success">+$2,456.78</span>
-          </div>
-
           {/* Theme Toggle */}
           <Button variant="ghost" size="sm" className="touch-friendly sm:h-9 sm:w-9 sm:p-0" onClick={toggleTheme}>
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -85,11 +88,11 @@ export function TopNavigation() {
               <Button variant="ghost" className="h-9 px-2 flex items-center gap-2">
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {user?.displayName?.[0] || "U"}
+                    {userInitial}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:block font-medium">
-                  {user?.displayName || user?.email || "User"}
+                  {user?.email || "User"}
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -97,7 +100,7 @@ export function TopNavigation() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{user?.displayName || "User"}</p>
+                  <p className="text-sm font-medium">Trader</p>
                   <p className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</p>
                 </div>
               </DropdownMenuLabel>

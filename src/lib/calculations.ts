@@ -1,5 +1,8 @@
 import { Trade, TradeMetrics } from '@/types/trade';
 
+// 1 LOT = $100 USD
+const LOT_VALUE = 100;
+
 /**
  * Calculate comprehensive trading metrics from an array of trades
  */
@@ -108,24 +111,29 @@ export const calculateAverageRMultiple = (trades: Trade[]): number => {
 
 /**
  * Calculate R-multiple for a single trade
- * R-multiple = (Exit - Entry) / (Entry - StopLoss) for long
- * R-multiple = (Entry - Exit) / (StopLoss - Entry) for short
+ * R-multiple = P&L / Risk Amount
+ * Where Risk Amount = (Entry - StopLoss) * Quantity * LOT_VALUE for long
+ * Where LOT_VALUE = $100 per lot
  */
 export const calculateRMultiple = (trade: Trade): number => {
   if (trade.exit === null) return 0;
   
   try {
-    const risk = trade.direction === 'long'
+    // Calculate the risk per unit
+    const riskPerUnit = trade.direction === 'long'
       ? trade.entry - trade.stopLoss
       : trade.stopLoss - trade.entry;
     
-    if (risk <= 0 || !isFinite(risk)) return 0;
+    if (riskPerUnit <= 0 || !isFinite(riskPerUnit)) return 0;
     
-    const reward = trade.direction === 'long'
-      ? trade.exit - trade.entry
-      : trade.entry - trade.exit;
+    // Calculate total risk in USD (using quantity as lots)
+    // quantity represents number of lots, each lot = $100
+    const totalRiskAmount = riskPerUnit * trade.quantity * LOT_VALUE;
     
-    const rMultiple = reward / risk;
+    if (totalRiskAmount <= 0 || !isFinite(totalRiskAmount)) return 0;
+    
+    // R-multiple = P&L / Total Risk Amount
+    const rMultiple = trade.pnl / totalRiskAmount;
     return isFinite(rMultiple) ? rMultiple : 0;
   } catch (error) {
     console.error('Error calculating R-multiple:', error);
@@ -135,6 +143,8 @@ export const calculateRMultiple = (trade: Trade): number => {
 
 /**
  * Calculate P&L for a single trade
+ * P&L = (Price Change * Quantity * LOT_VALUE) - Commission
+ * Where quantity represents number of lots and LOT_VALUE = $100
  */
 export const calculatePnL = (trade: Trade): number => {
   if (trade.exit === null) return 0;
@@ -145,7 +155,8 @@ export const calculatePnL = (trade: Trade): number => {
       : (trade.entry - trade.exit);
     
     const commission = trade.commission || 0;
-    const pnl = (priceChange * trade.quantity) - commission;
+    // Calculate P&L using LOT_VALUE ($100 per lot)
+    const pnl = (priceChange * trade.quantity * LOT_VALUE) - commission;
     
     return isFinite(pnl) ? pnl : 0;
   } catch (error) {

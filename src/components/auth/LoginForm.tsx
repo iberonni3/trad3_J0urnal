@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Eye, EyeOff, Mail } from 'lucide-react';
-import { loginWithEmail, loginWithGoogle } from '@/lib/firebase/auth';
-import { toast } from '@/components/ui/use-toast';
+import { signInWithEmail, signInWithGoogle } from '@/lib/supabase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
-  onToggleForm?: () => void; // optional if not using multi-form
+  onToggleForm?: () => void;
 }
 
 export function LoginForm({ onToggleForm }: LoginFormProps) {
@@ -18,18 +18,27 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await loginWithEmail(email, password);
-      toast({
-        title: 'Login successful',
-        description: 'Welcome back to your trading dashboard!',
-      });
-      navigate('/dashboard'); // Only navigate after successful login
+      const { error } = await signInWithEmail(email, password);
+      if (error) {
+        toast({
+          title: 'Login failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Login successful',
+          description: 'Welcome back to your trading dashboard!',
+        });
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast({
         title: 'Login failed',
@@ -44,12 +53,15 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
-      toast({
-        title: 'Google login successful',
-        description: 'Welcome to your trading dashboard!',
-      });
-      navigate('/dashboard'); // Only after successful login
+      const { error } = await signInWithGoogle();
+      if (error) {
+        toast({
+          title: 'Google login failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+      // OAuth redirects automatically
     } catch (error: any) {
       toast({
         title: 'Google login failed',
