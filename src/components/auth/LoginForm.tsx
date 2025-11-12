@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Eye, EyeOff, Mail } from 'lucide-react';
 import { signInWithEmail, sendPasswordResetEmail } from '@/lib/supabase/auth';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
@@ -25,12 +25,14 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   // Handle OAuth redirect on page load
   useEffect(() => {
     const handleOAuthRedirect = async () => {
-      const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
       if (error) {
-        console.error('OAuth redirect error:', error);
+        console.error('Error getting session:', error);
         return;
       }
-      if (data.session) {
+      
+      if (session) {
         toast({
           title: 'Login successful',
           description: 'Welcome back to your trading dashboard!',
