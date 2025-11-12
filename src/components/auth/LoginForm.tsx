@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Eye, EyeOff, Mail } from 'lucide-react';
-import { signInWithEmail, signInWithGoogle } from '@/lib/supabase/auth';
+import { signInWithEmail, signInWithGoogle, sendPasswordResetEmail } from '@/lib/supabase/auth';
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
@@ -17,8 +17,44 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter your account email first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsResettingPassword(true);
+    try {
+      const { error } = await sendPasswordResetEmail(email);
+      if (error) {
+        toast({
+          title: 'Reset failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Reset email sent',
+          description: 'Check your inbox for password reset instructions.',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Reset failed',
+        description: error.message || 'Something went wrong',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +157,17 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="p-0 h-auto text-xs font-medium text-primary"
+                  onClick={handlePasswordReset}
+                  disabled={isLoading || isResettingPassword}
+                >
+                  {isResettingPassword ? 'Sending reset...' : 'Forgot password?'}
                 </Button>
               </div>
             </div>

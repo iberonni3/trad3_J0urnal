@@ -59,6 +59,33 @@ export const signOut = async () => {
   return { error };
 };
 
+export const sendPasswordResetEmail = async (email: string) => {
+  const redirectTo = `${window.location.origin}/`;
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  return { data, error };
+};
+
+type UserProfileUpdate = {
+  displayName?: string;
+  fontSize?: 'small' | 'medium' | 'large';
+  accentColor?: 'indigo' | 'emerald' | 'purple';
+  tradingGoal?: string;
+};
+
+export const updateUserProfile = async (updates: UserProfileUpdate) => {
+  const metadataUpdates: Record<string, any> = {};
+  if (updates.displayName !== undefined) metadataUpdates.display_name = updates.displayName;
+  if (updates.fontSize !== undefined) metadataUpdates.font_size = updates.fontSize;
+  if (updates.accentColor !== undefined) metadataUpdates.accent_color = updates.accentColor;
+  if (updates.tradingGoal !== undefined) metadataUpdates.trading_goal = updates.tradingGoal;
+
+  const { data, error } = await supabase.auth.updateUser({
+    data: metadataUpdates,
+  });
+
+  return { data, error };
+};
+
 /**
  * Get current session
  */

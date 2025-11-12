@@ -1,6 +1,7 @@
 // ...existing code...
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useAccount } from '@/context/AccountContext';
 import { Trade, TradeInput } from '@/types/trade';
 import {
   getUserTrades,
@@ -16,11 +17,11 @@ import { useToast } from '@/hooks/use-toast';
 const getUserId = (user: any) => user?.id ?? user?.uid ?? null;
 
 // helper to invalidate trade-related queries
-const invalidateTradeRelatedQueries = (queryClient: any, userId: string | null) => {
+const invalidateTradeRelatedQueries = (queryClient: any, userId: string | null, accountId: string | null) => {
   if (!queryClient) return;
-  console.log('🔁 Invalidating trade-related queries for user:', userId);
+  console.log('🔁 Invalidating trade-related queries for user:', userId, 'account:', accountId);
   // primary trades query
-  if (userId) queryClient.invalidateQueries({ queryKey: ['trades', userId] });
+  if (userId) queryClient.invalidateQueries({ queryKey: ['trades', userId, accountId] });
   // invalidate any query whose key contains known dashboard/analytics/calendar identifiers
   const keysToInvalidate = new Set([
     'analytics',
@@ -51,15 +52,19 @@ const invalidateTradeRelatedQueries = (queryClient: any, userId: string | null) 
  */
 export const useTrades = () => {
   const { user } = useAuth();
+  const { selectedAccount } = useAccount();
   const userId = getUserId(user);
+  const accountId = selectedAccount?.id ?? null;
 
   return useQuery({
-    queryKey: ['trades', userId],
+    queryKey: ['trades', userId, accountId],
     queryFn: async () => {
       if (!userId) throw new Error('User not authenticated');
-      return await getUserTrades(userId);
+      if (!accountId) return [];
+      return await getUserTrades(userId, accountId);
     },
-    enabled: !!userId,
+    enabled: !!userId && !!accountId,
+    placeholderData: [] as Trade[],
   });
 };
 
@@ -68,15 +73,21 @@ export const useTrades = () => {
  */
 export const useCreateTrade = (onSuccessCallback?: () => void) => {
   const { user } = useAuth();
+  const { selectedAccount } = useAccount();
   const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const accountId = selectedAccount?.id ?? null;
 
   return useMutation({
     mutationFn: async (tradeInput: TradeInput) => {
       if (!userId) {
         console.error('❌ User not authenticated');
         throw new Error('User not authenticated');
+      }
+      if (!accountId) {
+        console.error('❌ No active account selected');
+        throw new Error('Account not selected');
       }
 
       console.group('📝 Creating Trade');
@@ -87,7 +98,7 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
       try {
         // Create the trade first to get the trade ID
         console.log('Step 1: Creating trade in database...');
-        const tradeId = await createTrade(userId, tradeInput);
+        const tradeId = await createTrade(userId, { ...tradeInput, accountId });
         console.log('✅ Trade created successfully with ID:', tradeId);
 
         // Upload screenshot if provided
@@ -131,7 +142,7 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
     },
     onSuccess: () => {
       console.log('🔄 CreateTrade onSuccess — refresh related queries');
-      invalidateTradeRelatedQueries(queryClient, userId);
+      invalidateTradeRelatedQueries(queryClient, userId, accountId);
       toast({
         title: 'Success',
         description: 'Trade created successfully',
@@ -154,9 +165,11 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
  */
 export const useUpdateTrade = () => {
   const { user } = useAuth();
+  const { selectedAccount } = useAccount();
   const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const accountId = selectedAccount?.id ?? null;
 
   return useMutation({
     mutationFn: async ({
@@ -186,7 +199,7 @@ export const useUpdateTrade = () => {
     },
     onSuccess: () => {
       console.log('🔄 UpdateTrade onSuccess — refresh related queries');
-      invalidateTradeRelatedQueries(queryClient, userId);
+      invalidateTradeRelatedQueries(queryClient, userId, accountId);
       toast({
         title: 'Success',
         description: 'Trade updated successfully',
@@ -208,9 +221,11 @@ export const useUpdateTrade = () => {
  */
 export const useDeleteTrade = () => {
   const { user } = useAuth();
+  const { selectedAccount } = useAccount();
   const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const accountId = selectedAccount?.id ?? null;
 
   return useMutation({
     mutationFn: async (tradeId: string) => {
@@ -219,7 +234,7 @@ export const useDeleteTrade = () => {
     },
     onSuccess: () => {
       console.log('🔄 DeleteTrade onSuccess — refresh related queries');
-      invalidateTradeRelatedQueries(queryClient, userId);
+      invalidateTradeRelatedQueries(queryClient, userId, accountId);
       toast({
         title: 'Success',
         description: 'Trade deleted successfully',
@@ -241,9 +256,11 @@ export const useDeleteTrade = () => {
  */
 export const useCloseTrade = () => {
   const { user } = useAuth();
+  const { selectedAccount } = useAccount();
   const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const accountId = selectedAccount?.id ?? null;
 
   return useMutation({
     mutationFn: async ({
@@ -260,7 +277,7 @@ export const useCloseTrade = () => {
     },
     onSuccess: () => {
       console.log('🔄 CloseTrade onSuccess — refresh related queries');
-      invalidateTradeRelatedQueries(queryClient, userId);
+      invalidateTradeRelatedQueries(queryClient, userId, accountId);
       toast({
         title: 'Success',
         description: 'Trade closed successfully',

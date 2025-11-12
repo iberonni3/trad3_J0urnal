@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { applyUserPreferences } from '@/lib/preferences';
 
 /**
  * Hook to get the current authenticated user from Supabase
@@ -13,19 +14,32 @@ export const useAuth = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setUser(session?.user ?? null);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) applyUserPreferences(currentUser.user_metadata);
         setLoading(false);
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) applyUserPreferences(currentUser.user_metadata);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  return { user, loading };
+  const refreshUser = useCallback(async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error) {
+      setUser(data.user ?? null);
+      if (data.user) applyUserPreferences(data.user.user_metadata);
+    }
+    return data.user ?? null;
+  }, []);
+
+  return { user, loading, refreshUser };
 };

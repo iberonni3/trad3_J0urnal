@@ -16,10 +16,12 @@ import { format, subMonths } from 'date-fns';
 import { useTrades } from '@/hooks/useTrades';
 import { useTradeMetrics } from '@/hooks/useTradeMetrics';
 import { formatCurrency, formatPercentage } from '@/lib/calculations';
+import { useAccount } from '@/context/AccountContext';
 
 export default function Dashboard() {
   const { data: trades, isLoading } = useTrades();
   const metrics = useTradeMetrics(trades);
+  const { selectedAccount } = useAccount();
 
   // Generate calendar data from actual trades
   const calendarData = trades
@@ -41,9 +43,13 @@ export default function Dashboard() {
     <div className="content-spacing">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Trading Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          {selectedAccount ? selectedAccount.name : 'Trading Dashboard'}
+        </h1>
         <p className="text-muted-foreground text-sm sm:text-base">
-          Welcome back! Here's an overview of your trading performance.
+          {selectedAccount?.broker
+            ? `Broker: ${selectedAccount.broker}`
+            : "Welcome back! Here's an overview of your trading performance."}
         </p>
       </div>
 

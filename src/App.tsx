@@ -2,11 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopNavigation } from "@/components/layout/TopNavigation";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AccountProvider, useAccount } from "@/context/AccountContext";
+import Accounts from "./pages/Accounts";
 
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
@@ -15,7 +18,8 @@ import Charts from "./pages/Charts";
 import Analytics from "./pages/Analytics";
 import Calendar from "./pages/Calendar";
 import Journal from "./pages/Journal";
-import Import from "./pages/Import";
+import Analysis from "./pages/Analysis";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { VerifyEmail } from '@/pages/VerifyEmail';
 import { VerifyEmailInstructions } from '@/pages/VerifyEmailInstructions';
@@ -24,21 +28,45 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 const queryClient = new QueryClient();
 
 // Dashboard Layout
-const AppLayout = () => (
-  <SidebarProvider>
-    <div className="flex min-h-screen w-full">
-      <AppSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopNavigation />
-        <main className="flex-1 overflow-auto mobile-container section-padding">
-          <div className="content-spacing max-w-7xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
+const AppLayout = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { accounts, selectedAccount, isLoading } = useAccount();
+
+  useEffect(() => {
+    if (isLoading) return;
+    const onAccountsPage = location.pathname === '/accounts';
+    const exemptRoutes = ['/charts', '/settings'];
+    const isExempt = exemptRoutes.includes(location.pathname);
+
+    if (isExempt) return;
+
+    if (!accounts.length && !onAccountsPage) {
+      navigate('/accounts', { replace: true });
+      return;
+    }
+
+    if (accounts.length && !selectedAccount && !onAccountsPage) {
+      navigate('/accounts', { replace: true });
+    }
+  }, [accounts.length, isLoading, location.pathname, navigate, selectedAccount]);
+
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopNavigation />
+          <main className="flex-1 overflow-auto mobile-container section-padding">
+            <div className="content-spacing max-w-7xl mx-auto">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
-  </SidebarProvider>
-);
+    </SidebarProvider>
+  );
+};
 
 // Standalone Layout (no sidebar/nav)
 const StandaloneLayout = () => (
@@ -49,11 +77,12 @@ const StandaloneLayout = () => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" storageKey="tradejournal-ui-theme">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <AccountProvider>
+      <ThemeProvider defaultTheme="dark" storageKey="tradejournal-ui-theme">
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
         <Routes>
           {/* Public Auth Page */}
           <Route element={<StandaloneLayout />}>
@@ -73,34 +102,19 @@ const App = () => (
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/journal" element={<Journal />} />
-              <Route path="/import" element={<Import />} />
-              <Route path="/accounts" element={
-                <div className="p-6">
-                  <h1 className="text-3xl font-bold">Accounts</h1>
-                  <p className="text-muted-foreground">Coming soon...</p>
-                </div>
-              } />
-              <Route path="/strategies" element={
-                <div className="p-6">
-                  <h1 className="text-3xl font-bold">Strategies</h1>
-                  <p className="text-muted-foreground">Coming soon...</p>
-                </div>
-              } />
-              <Route path="/settings" element={
-                <div className="p-6">
-                  <h1 className="text-3xl font-bold">Settings</h1>
-                  <p className="text-muted-foreground">Coming soon...</p>
-                </div>
-              } />
+              <Route path="/accounts" element={<Accounts />} />
+              <Route path="/analysis" element={<Analysis />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>
 
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </AccountProvider>
   </QueryClientProvider>
 );
 

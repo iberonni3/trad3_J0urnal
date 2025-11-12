@@ -5,18 +5,25 @@ import { calculatePnL, calculateRMultiple } from '@/lib/calculations';
 /**
  * Get all trades for a user
  */
-export const getUserTrades = async (userId: string): Promise<Trade[]> => {
-  const { data, error } = await supabase
+export const getUserTrades = async (userId: string, accountId?: string | null): Promise<Trade[]> => {
+  let query = supabase
     .from('trades')
     .select('*')
     .eq('user_id', userId)
     .order('open_time', { ascending: false });
+
+  if (accountId) {
+    query = query.or(`account_id.eq.${accountId},account_id.is.null`);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
   return (data || []).map(trade => ({
     id: trade.id,
     userId: trade.user_id,
+    accountId: trade.account_id ?? null,
     symbol: trade.symbol,
     direction: trade.direction as 'long' | 'short',
     entry: Number(trade.entry),
@@ -99,6 +106,7 @@ export const createTrade = async (userId: string, tradeInput: TradeInput): Promi
     .from('trades')
     .insert({
       user_id: userId,
+      account_id: tradeInput.accountId ?? null,
       symbol: tradeInput.symbol,
       direction: tradeInput.direction,
       entry: tradeInput.entry,
@@ -227,6 +235,7 @@ export const updateTrade = async (
     updated_at: new Date().toISOString(),
   };
 
+  if (updates.accountId !== undefined) updateData.account_id = updates.accountId;
   if (updates.symbol !== undefined) updateData.symbol = updates.symbol;
   if (updates.direction !== undefined) updateData.direction = updates.direction;
   if (updates.entry !== undefined) updateData.entry = updates.entry;
@@ -295,6 +304,7 @@ export const closeTrade = async (
   const tempTrade: Trade = {
     id: tradeId,
     userId,
+    accountId: trade.account_id ?? null,
     symbol: trade.symbol,
     direction: trade.direction,
     entry: Number(trade.entry),

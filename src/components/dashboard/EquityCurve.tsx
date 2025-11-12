@@ -1,5 +1,5 @@
 // ...existing code...
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -11,11 +11,10 @@ import {
   ReferenceLine
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
-import { getUserTrades } from '@/lib/supabase/trades';
 import { format, parseISO } from 'date-fns';
 import { Trade as TradeType } from '@/types/trade';
+import { useAccount } from '@/context/AccountContext';
+import { useTrades } from '@/hooks/useTrades';
 
 interface EquityDataPoint {
   date: string;
@@ -25,9 +24,7 @@ interface EquityDataPoint {
   initialBalance?: number;
 }
 
-const getUserId = (user: any) => user?.id ?? user?.uid ?? null;
-
-const processTradesToEquityData = (trades: TradeType[], startingBalance: number = 10000): EquityDataPoint[] => {
+const processTradesToEquityData = (trades: TradeType[], startingBalance: number): EquityDataPoint[] => {
   if (!trades || trades.length === 0) return [];
 
   // Filter and sort trades by close time
@@ -112,20 +109,23 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function EquityCurve() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = getUserId(user);
-  const startingBalance = 10000; // Default starting balance
+  const { selectedAccount } = useAccount();
+  const { data: trades = [], isLoading } = useTrades();
+  const startingBalance = selectedAccount?.initialBalance ?? 0;
 
-  // Fetch trades data
-  const { data: trades = [], isLoading } = useQuery({
-    queryKey: ['trades', userId],
-    queryFn: async (): Promise<TradeType[]> => {
-      if (!userId) return [];
-      return await getUserTrades(userId);
-    },
-    enabled: !!userId,
-  });
+  if (!selectedAccount) {
+    return (
+      <Card className="trading-card">
+        <CardHeader>
+          <CardTitle>Account Equity Curve</CardTitle>
+          <CardDescription>Select or create an account to view its equity curve.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center">
+          <div className="text-muted-foreground">No account selected</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Process trades into equity curve data
   const equityData = useMemo(() => 
@@ -150,16 +150,6 @@ export function EquityCurve() {
       totalTrades: current.trades
     };
   }, [equityData, startingBalance]);
-
-  // Listen for trade changes
-  useEffect(() => {
-    const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['trades', userId] });
-    };
-
-    window.addEventListener('trades:updated', handler);
-    return () => window.removeEventListener('trades:updated', handler);
-  }, [queryClient, userId]);
 
   if (isLoading) {
     return (

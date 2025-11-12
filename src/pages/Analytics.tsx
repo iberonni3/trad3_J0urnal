@@ -21,38 +21,16 @@ import {
   AreaChart,
 } from 'recharts';
 import { TrendingUp, TrendingDown, Target, Calculator, Calendar, Filter, Loader2 } from 'lucide-react';
-import { getUserTrades } from '@/lib/tradeService';
-import { supabase } from '@/integrations/supabase/client';
 import { Trade } from '@/types/trade';
+import { useAccount } from '@/context/AccountContext';
+import { useTrades } from '@/hooks/useTrades';
 
 export default function Analytics() {
   const [timeRange, setTimeRange] = useState('6m');
   const [activeTab, setActiveTab] = useState('overview');
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  // Get current user and fetch trades
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          setUserId(user.id);
-          const userTrades = await getUserTrades(user.id);
-          setTrades(userTrades);
-        }
-      } catch (error) {
-        console.error('Error fetching trades:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const { selectedAccount } = useAccount();
+  const { data: trades = [], isLoading: tradesLoading } = useTrades();
+  const loading = tradesLoading;
 
   // Filter trades by time range
   const getFilteredTrades = () => {
@@ -109,70 +87,47 @@ export default function Analytics() {
   }, [filteredTrades, timeRange]);
 
   // Calculate overview data by month and year
-  const calculateOverviewData = () => {
-    console.log('Calculating overview data...');
-    const monthlyData: { [key: string]: { 
-      profit: number; 
-      loss: number; 
-      trades: number;
-      sortKey: number;
-    } } = {};
-    
-    console.log('Filtered trades for overview:', filteredTrades);
-    
-    filteredTrades.forEach(trade => {
-      if (trade.status === 'closed') {
-        const date = new Date(trade.closeTime || trade.openTime);
-        
-        // Create consistent month key with year (e.g., "Nov 2023")
-        const monthKey = date.toLocaleDateString('en-US', { 
-          month: 'short', 
-          year: 'numeric' 
-        });
-        
-        // Create a sort key (YYYYMM) for proper chronological ordering
-        const sortKey = date.getFullYear() * 100 + (date.getMonth() + 1);
-        
-        if (!monthlyData[monthKey]) {
-          monthlyData[monthKey] = { 
-            profit: 0, 
-            loss: 0, 
-            trades: 0,
-            sortKey
-          };
-        }
-        
-        // Log each trade's PnL for debugging
-        console.log(`Trade ${trade.id} - PnL: ${trade.pnl}, Month: ${monthKey}`);
-        
-        // Update profit/loss
-        if (trade.pnl > 0) {
-          monthlyData[monthKey].profit += trade.pnl;
-        } else if (trade.pnl < 0) {
-          monthlyData[monthKey].loss += trade.pnl;
-        }
-        monthlyData[monthKey].trades += 1;
-      }
-    });
-
-    const result = Object.entries(monthlyData)
-      .map(([month, data]) => {
-        const netPnL = data.profit + data.loss;
-        console.log(`Month ${month}: Profit=${data.profit}, Loss=${data.loss}, Net=${netPnL}, Trades=${data.trades}`);
-        
+  const calculatePnLCurveData = (startingBalance: number) => {
+    const closedTrades = filteredTrades
+      .filter((trade) => trade.status === 'closed')
+      .map((trade) => {
+        const rawDate = trade.closeTime ?? trade.openTime;
+        const date = rawDate ? new Date(rawDate) : null;
         return {
-          month,
-          profit: Math.round(data.profit),
-          loss: Math.round(data.loss),
-          netPnL: Math.round(netPnL),
-          trades: data.trades,
-          sortKey: data.sortKey
+          date,
+          pnl: trade.pnl ?? 0,
         };
       })
-      .sort((a, b) => a.sortKey - b.sortKey);
-      
-    console.log('Final monthly data result:', result);
-    return result;
+      .filter((item) => item.date && !Number.isNaN(item.date.getTime()));
+
+    const dailyMap = new Map<string, number>();
+
+    closedTrades.forEach(({ date, pnl }) => {
+      if (!date) return;
+      const key = date.toISOString().split('T')[0];
+      dailyMap.set(key, (dailyMap.get(key) ?? 0) + pnl);
+    });
+
+    const sortedKeys = Array.from(dailyMap.keys()).sort();
+    let cumulative = 0;
+
+    return sortedKeys.map((isoDate) => {
+      const dailyPnL = dailyMap.get(isoDate) ?? 0;
+      cumulative += dailyPnL;
+
+      const displayDate = new Date(isoDate);
+
+      return {
+        date: isoDate,
+        label: displayDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        }),
+        dailyPnL,
+        cumulativePnL: cumulative,
+        equity: cumulative + startingBalance,
+      };
+    });
   };
 
   // Calculate symbol performance
@@ -283,13 +238,56 @@ export default function Analytics() {
           <p className="font-medium mb-2">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.dataKey}: {entry.dataKey.includes('Rate') ? `${entry.value}%` : entry.value}
+              {entry.dataKey}:{' '}
+              {typeof entry.value === 'number'
+                ? entry.dataKey.toLowerCase().includes('rate')
+                  ? `${entry.value}%`
+                  : entry.dataKey.toLowerCase().includes('pnl') ||
+                    entry.dataKey.toLowerCase().includes('profit') ||
+                    entry.dataKey.toLowerCase().includes('loss')
+                  ? formatCurrency(entry.value)
+                  : entry.value
+                : entry.value}
             </p>
           ))}
         </div>
       );
     }
     return null;
+  };
+
+  const PnLCurveTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const dataPoint = payload[0]?.payload;
+    if (!dataPoint) return null;
+
+    const labelDate = new Date(label);
+    const formattedLabel = labelDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    return (
+      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+        <p className="font-medium mb-2">{formattedLabel}</p>
+        <p className="text-sm text-muted-foreground">
+          Daily P&L: {formatCurrency(dataPoint.dailyPnL)}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Cumulative: {formatCurrency(dataPoint.cumulativePnL)}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Equity: {formatCurrency(dataPoint.equity)}
+        </p>
+      </div>
+    );
+  };
+
+  const formatXAxisLabel = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   if (loading) {
@@ -303,7 +301,8 @@ export default function Analytics() {
     );
   }
 
-  const overviewData = calculateOverviewData();
+  const initialBalance = selectedAccount?.initialBalance ?? 0;
+  const pnlCurveData = calculatePnLCurveData(initialBalance);
   const symbolData = calculateSymbolData();
   const setupData = calculateSetupData();
   const kpis = calculateKPIs();
@@ -316,9 +315,13 @@ export default function Analytics() {
         <div className="trading-card section-padding">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-2">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Analytics</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                {selectedAccount ? `${selectedAccount.name} Analytics` : 'Analytics'}
+              </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
-                Deep insights into your trading performance and patterns
+                {selectedAccount?.broker
+                  ? `Broker: ${selectedAccount.broker} · Starting Balance ${formatCurrency(initialBalance)}`
+                  : 'Deep insights into your trading performance and patterns'}
               </p>
             </div>
             
@@ -434,37 +437,50 @@ export default function Analytics() {
                 <div className="grid gap-6 lg:grid-cols-2">
                   <Card className="trading-card">
                     <CardHeader>
-                      <CardTitle>Monthly P&L Trend</CardTitle>
-                      <CardDescription>Profit and loss breakdown by month</CardDescription>
+                      <CardTitle>P&amp;L Curve</CardTitle>
+                      <CardDescription>Daily net profit and loss with cumulative total</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {overviewData.length > 0 ? (
+                      {pnlCurveData.length > 0 ? (
                         <div className="h-80">
                           <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={overviewData}>
+                            <AreaChart data={pnlCurveData}>
                               <defs>
-                                <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
-                                  <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+                                <linearGradient id="pnlCurveGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
                                 </linearGradient>
                               </defs>
                               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                              <XAxis dataKey="month" />
-                              <YAxis tickFormatter={(value) => `$${value}`} />
-                              <Tooltip content={<CustomTooltip />} />
+                              <XAxis
+                                dataKey="date"
+                                tickFormatter={formatXAxisLabel}
+                                minTickGap={24}
+                              />
+                              <YAxis
+                                tickFormatter={(value) => formatCurrency(value).replace('+', '')}
+                              />
+                              <Tooltip content={<PnLCurveTooltip />} />
                               <Area
                                 type="monotone"
-                                dataKey="profit"
-                                stroke="hsl(var(--success))"
+                                dataKey="equity"
+                                stroke="hsl(var(--primary))"
                                 fillOpacity={1}
-                                fill="url(#profitGradient)"
+                                fill="url(#pnlCurveGradient)"
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="cumulativePnL"
+                                stroke="hsl(var(--success))"
+                                strokeWidth={2}
+                                dot={false}
                               />
                             </AreaChart>
                           </ResponsiveContainer>
                         </div>
                       ) : (
                         <div className="h-80 flex items-center justify-center text-muted-foreground">
-                          No monthly data available
+                          No closed trades with P&amp;L available for this range
                         </div>
                       )}
                     </CardContent>

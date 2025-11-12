@@ -7,7 +7,6 @@ import {
   PieChart,
   Settings,
   TrendingUp,
-  Upload,
   BookOpen,
   Target,
   Users
@@ -36,13 +35,12 @@ const navigationItems = [
   { title: 'Trades', url: '/trades', icon: BarChart3, description: 'Manage Trades' },
   { title: 'Analytics', url: '/analytics', icon: PieChart, description: 'Performance Insights' },
   { title: 'Calendar', url: '/calendar', icon: Calendar, description: 'Trading Calendar' },
-  { title: 'Journal', url: '/journal', icon: BookOpen, description: 'Trading Notes' },
-  { title: 'Import', url: '/import', icon: Upload, description: 'MT5 Import' }
+  { title: 'Journal', url: '/journal', icon: BookOpen, description: 'Trading Notes' }
 ];
 
 const secondaryItems = [
   { title: 'Accounts', url: '/accounts', icon: Users, description: 'Trading Accounts' },
-  { title: 'Strategies', url: '/strategies', icon: Target, description: 'Trading Setups' },
+  { title: 'Analysis', url: '/analysis', icon: Target, description: 'Forecasts & notes' },
   { title: 'Settings', url: '/settings', icon: Settings, description: 'Preferences' }
 ];
 

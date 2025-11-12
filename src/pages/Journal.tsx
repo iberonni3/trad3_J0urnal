@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,116 +25,27 @@ import {
   Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import {
+  fetchJournalEntries,
+  fetchJournalLessons,
+  createJournalEntry,
+  updateJournalEntry,
+  deleteJournalEntry,
+  createJournalLesson,
+  updateJournalLesson,
+  deleteJournalLesson,
+} from '@/lib/supabase/journal';
+import type {
+  JournalEntryRecord,
+  JournalEntryInput,
+  JournalLesson,
+  JournalLessonInput,
+} from '@/types/journal';
 
-// Sample journal entries
-const initialJournalEntries = [
-  {
-    id: '1',
-    date: '2024-03-15',
-    title: 'Strong EURUSD Breakout Setup',
-    content: 'Perfect execution on the morning breakout. Waited for the 1-hour candle close above resistance before entering. Risk management was on point with 2:1 R/R achieved.',
-    tags: ['breakout', 'EURUSD', 'success'],
-    mood: 'confident',
-    performance: 'excellent',
-    pnl: 450,
-    tradesCount: 3,
-    lessons: 'Patience in waiting for confirmation paid off. The setup was textbook and execution was flawless.',
-    improvements: 'Could have sized up slightly given the strong conviction level.',
-    hidden: false
-  },
-  {
-    id: '2',
-    date: '2024-03-14',
-    title: 'Revenge Trading After Early Loss',
-    content: 'Started the day with a good XAUUSD trade, but then got stopped out on GBPJPY due to news event. Made the mistake of trying to "get back" immediately with oversized position.',
-    tags: ['psychology', 'revenge-trading', 'lesson'],
-    mood: 'frustrated',
-    performance: 'poor',
-    pnl: -120,
-    tradesCount: 4,
-    lessons: 'Emotional trading leads to poor decisions. Need to stick to the plan regardless of earlier outcomes.',
-    improvements: 'Take a 30-minute break after any significant loss before considering next trade.',
-    hidden: false
-  },
-  {
-    id: '3',
-    date: '2024-03-13',
-    title: 'Multiple Timeframe Analysis Success',
-    content: 'Excellent day using multiple timeframe analysis. Daily showed uptrend, 4H confirmed higher lows, and 1H provided clean entry signals.',
-    tags: ['MTF-analysis', 'trend-following', 'success'],
-    mood: 'focused',
-    performance: 'excellent',
-    pnl: 680,
-    tradesCount: 2,
-    lessons: 'Multiple timeframe analysis provides high-probability setups when all timeframes align.',
-    improvements: 'Could document the specific confluence factors for future reference.',
-    hidden: false
-  }
-];
-
-// Sample lessons library with enhanced data
-const initialLessonsLibrary = [
-  {
-    id: '1',
-    title: 'Risk Management is Everything',
-    category: 'Risk Management',
-    content: 'Never risk more than 1% per trade. Position sizing is more important than entry timing. This fundamental rule has protected my account during multiple drawdown periods and allowed for consistent growth.',
-    tags: ['risk', 'psychology', 'fundamentals'],
-    dateAdded: '2024-03-10',
-    importance: 'high',
-    timesApplied: 47,
-    successRate: 89,
-    relatedEntries: ['1', '2']
-  },
-  {
-    id: '2',
-    title: 'Wait for Confirmation',
-    category: 'Entry Signals',
-    content: 'Always wait for candle close confirmation before entering breakout trades. Reduces false breakouts by 60%. This patience has saved me from countless bad trades.',
-    tags: ['breakout', 'confirmation', 'entry'],
-    dateAdded: '2024-03-08',
-    importance: 'high',
-    timesApplied: 23,
-    successRate: 74,
-    relatedEntries: ['1', '3']
-  },
-  {
-    id: '3',
-    title: 'News Event Buffer',
-    category: 'Fundamentals',
-    content: 'Close all trades 30 minutes before high-impact news events. Market becomes unpredictable and spreads widen significantly.',
-    tags: ['news', 'risk', 'volatility'],
-    dateAdded: '2024-03-05',
-    importance: 'medium',
-    timesApplied: 15,
-    successRate: 93,
-    relatedEntries: ['2']
-  },
-  {
-    id: '4',
-    title: 'Emotional Reset Protocol',
-    category: 'Psychology',
-    content: 'After any loss > 0.5% of account, take a mandatory 30-minute break. Walk away from screens, do breathing exercises, and only return with a clear mindset.',
-    tags: ['psychology', 'emotional-control', 'discipline'],
-    dateAdded: '2024-03-12',
-    importance: 'high',
-    timesApplied: 8,
-    successRate: 100,
-    relatedEntries: ['2']
-  },
-  {
-    id: '5',
-    title: 'Support and Resistance Confluence',
-    category: 'Technical Analysis',
-    content: 'Look for at least 3 confluence factors: S/R level, moving average, and Fibonacci level. Higher confluence = higher probability trades.',
-    tags: ['technical-analysis', 'confluence', 'support-resistance'],
-    dateAdded: '2024-03-07',
-    importance: 'medium',
-    timesApplied: 34,
-    successRate: 67,
-    relatedEntries: ['1', '3']
-  }
-];
+type JournalEntryFormState = JournalEntryInput & { id?: string; newTag?: string };
+type JournalLessonFormState = JournalLessonInput & { id?: string; newTag?: string };
 
 const lessonCategories = [
   'All Categories',
@@ -148,38 +59,141 @@ const lessonCategories = [
 ];
 
 export default function Journal() {
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const userId = user?.id ?? null;
+
   const [activeTab, setActiveTab] = useState('entries');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [journalEntries, setJournalEntries] = useState(initialJournalEntries);
-  const [lessonsLibrary, setLessonsLibrary] = useState(initialLessonsLibrary);
+  const [journalEntries, setJournalEntries] = useState<JournalEntryRecord[]>([]);
+  const [lessonsLibrary, setLessonsLibrary] = useState<JournalLesson[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentEntry, setCurrentEntry] = useState(null);
+  const [currentEntry, setCurrentEntry] = useState<JournalEntryFormState | JournalLessonFormState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  const [entryType, setEntryType] = useState('journal'); // 'journal' or 'lesson'
+  const [entryType, setEntryType] = useState<'journal' | 'lesson'>('journal');
+  const [entriesLoading, setEntriesLoading] = useState(false);
+  const [lessonsLoading, setLessonsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredEntries = journalEntries.filter(entry => {
-    if (entry.hidden && !showHidden) return false;
-    const matchesSearch = entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesFilter = selectedFilter === 'all' || entry.performance === selectedFilter;
-    
-    return matchesSearch && matchesFilter;
+  const entryToFormState = (entry: JournalEntryRecord): JournalEntryFormState => ({
+    id: entry.id,
+    tradeId: entry.tradeId ?? null,
+    date: entry.date,
+    title: entry.title,
+    content: entry.content,
+    tags: [...entry.tags],
+    mood: entry.mood,
+    performance: entry.performance,
+    pnl: entry.pnl,
+    tradesCount: entry.tradesCount,
+    lessons: entry.lessons,
+    improvements: entry.improvements,
+    hidden: entry.hidden,
+    newTag: '',
   });
 
-  const filteredLessons = lessonsLibrary.filter(lesson => {
-    const matchesSearch = lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lesson.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lesson.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === 'All Categories' || lesson.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
+  const lessonToFormState = (lesson: JournalLesson): JournalLessonFormState => ({
+    id: lesson.id,
+    title: lesson.title,
+    category: lesson.category,
+    content: lesson.content,
+    tags: [...lesson.tags],
+    dateAdded: lesson.dateAdded,
+    importance: lesson.importance,
+    timesApplied: lesson.timesApplied,
+    successRate: lesson.successRate,
+    relatedEntries: [...lesson.relatedEntries],
+    newTag: '',
   });
+
+  const ensureAuthenticated = useCallback(() => {
+    if (!userId) {
+      toast({
+        title: 'Sign in required',
+        description: 'Please sign in to manage your journal entries.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    return true;
+  }, [toast, userId]);
+
+  const loadEntries = useCallback(async () => {
+    if (!userId) return;
+    const entries = await fetchJournalEntries(userId);
+    setJournalEntries(entries);
+  }, [userId]);
+
+  const loadLessons = useCallback(async () => {
+    if (!userId) return;
+    const lessons = await fetchJournalLessons(userId);
+    setLessonsLibrary(lessons);
+  }, [userId]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!userId) {
+      setJournalEntries([]);
+      setLessonsLibrary([]);
+      setEntriesLoading(false);
+      setLessonsLoading(false);
+      return;
+    }
+
+    const loadData = async () => {
+      setEntriesLoading(true);
+      setLessonsLoading(true);
+      try {
+        await Promise.all([loadEntries(), loadLessons()]);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading journal data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load journal data.');
+      } finally {
+        setEntriesLoading(false);
+        setLessonsLoading(false);
+      }
+    };
+
+    void loadData();
+  }, [authLoading, userId, loadEntries, loadLessons]);
+
+  const filteredEntries = useMemo(() => {
+    return journalEntries.filter((entry) => {
+      if (entry.hidden && !showHidden) return false;
+
+      const needle = searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        needle.length === 0 ||
+        entry.title.toLowerCase().includes(needle) ||
+        entry.content.toLowerCase().includes(needle) ||
+        entry.tags.some((tag) => tag.toLowerCase().includes(needle));
+
+      const matchesFilter = selectedFilter === 'all' || entry.performance === selectedFilter;
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [journalEntries, searchTerm, selectedFilter, showHidden]);
+
+  const filteredLessons = useMemo(() => {
+    return lessonsLibrary.filter((lesson) => {
+      const needle = searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        needle.length === 0 ||
+        lesson.title.toLowerCase().includes(needle) ||
+        lesson.content.toLowerCase().includes(needle) ||
+        lesson.tags.some((tag) => tag.toLowerCase().includes(needle));
+
+      const matchesCategory = selectedCategory === 'All Categories' || lesson.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [lessonsLibrary, searchTerm, selectedCategory]);
 
   const getMoodColor = (mood) => {
     switch (mood) {
@@ -231,10 +245,17 @@ export default function Journal() {
     return 'text-slate-400';
   };
 
-  const handleNewEntry = (type = 'journal') => {
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setCurrentEntry(null);
+    setIsEditing(false);
+  };
+
+  const handleNewEntry = (type: 'journal' | 'lesson' = 'journal') => {
+    if (!ensureAuthenticated()) return;
+
     if (type === 'lesson') {
       setCurrentEntry({
-        id: Date.now().toString(),
         title: '',
         category: 'Risk Management',
         content: '',
@@ -244,12 +265,11 @@ export default function Journal() {
         timesApplied: 0,
         successRate: 0,
         relatedEntries: [],
-        newTag: ''
+        newTag: '',
       });
-      setEntryType('lesson');
     } else {
       setCurrentEntry({
-        id: Date.now().toString(),
+        tradeId: null,
         date: new Date().toISOString().split('T')[0],
         title: '',
         content: '',
@@ -261,52 +281,136 @@ export default function Journal() {
         lessons: '',
         improvements: '',
         hidden: false,
-        newTag: ''
+        newTag: '',
       });
-      setEntryType('journal');
     }
+
+    setEntryType(type);
     setIsEditing(false);
     setIsDialogOpen(true);
   };
 
-  const handleEditEntry = (entry, type) => {
-    setCurrentEntry({ ...entry, newTag: '' });
+  const handleEditEntry = (entry: JournalEntryRecord | JournalLesson, type: 'journal' | 'lesson') => {
+    if (!ensureAuthenticated()) return;
+
+    if (type === 'lesson') {
+      setCurrentEntry(lessonToFormState(entry as JournalLesson));
+    } else {
+      setCurrentEntry(entryToFormState(entry as JournalEntryRecord));
+    }
+
     setEntryType(type);
     setIsEditing(true);
     setIsDialogOpen(true);
   };
 
-  const handleSaveEntry = () => {
-    if (entryType === 'lesson') {
-      setLessonsLibrary(prev => 
-        isEditing 
-          ? prev.map(e => e.id === currentEntry.id ? currentEntry : e)
-          : [...prev, currentEntry]
-      );
-    } else {
-      setJournalEntries(prev => 
-        isEditing 
-          ? prev.map(e => e.id === currentEntry.id ? currentEntry : e)
-          : [...prev, currentEntry]
-      );
+  const handleSaveEntry = async () => {
+    if (!currentEntry) return;
+    if (!ensureAuthenticated()) return;
+
+    setIsSaving(true);
+
+    try {
+      if (entryType === 'lesson') {
+        const { id, newTag, ...lessonPayload } = currentEntry as JournalLessonFormState;
+        const payload: JournalLessonInput = {
+          ...lessonPayload,
+          tags: lessonPayload.tags ?? [],
+          relatedEntries: lessonPayload.relatedEntries ?? [],
+        };
+
+        if (id) {
+          await updateJournalLesson(userId!, id, payload);
+          toast({ title: 'Lesson updated' });
+        } else {
+          await createJournalLesson(userId!, payload);
+          toast({ title: 'Lesson added' });
+        }
+
+        await loadLessons();
+      } else {
+        const { id, newTag, ...entryPayload } = currentEntry as JournalEntryFormState;
+        const payload: JournalEntryInput = {
+          ...entryPayload,
+          tradeId: entryPayload.tradeId ?? null,
+          tags: entryPayload.tags ?? [],
+        };
+
+        if (id) {
+          await updateJournalEntry(userId!, id, payload);
+          toast({ title: 'Journal entry updated' });
+        } else {
+          await createJournalEntry(userId!, payload);
+          toast({ title: 'Journal entry added' });
+        }
+
+        await loadEntries();
+      }
+
+      closeDialog();
+      setError(null);
+    } catch (err) {
+      console.error('Error saving journal data:', err);
+      setError(err instanceof Error ? err.message : 'Unable to save your changes right now.');
+      toast({
+        title: 'Failed to save',
+        description: err instanceof Error ? err.message : 'Unable to save your changes right now.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
-    setIsDialogOpen(false);
   };
 
-  const handleDeleteEntry = (id, type) => {
-    if (type === 'lesson') {
-      setLessonsLibrary(prev => prev.filter(e => e.id !== id));
-    } else {
-      setJournalEntries(prev => prev.filter(e => e.id !== id));
+  const handleDeleteEntry = async (id: string, type: 'journal' | 'lesson') => {
+    if (!ensureAuthenticated()) return;
+
+    setIsSaving(true);
+    try {
+      if (type === 'lesson') {
+        await deleteJournalLesson(userId!, id);
+        await loadLessons();
+        toast({ title: 'Lesson removed' });
+        setError(null);
+      } else {
+        await deleteJournalEntry(userId!, id);
+        await loadEntries();
+        toast({ title: 'Journal entry removed' });
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Error deleting journal data:', err);
+      setError(err instanceof Error ? err.message : 'Unable to delete this item.');
+      toast({
+        title: 'Failed to delete',
+        description: err instanceof Error ? err.message : 'Unable to delete this item.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleToggleHide = (id) => {
-    setJournalEntries(prev => 
-      prev.map(entry => 
-        entry.id === id ? { ...entry, hidden: !entry.hidden } : entry
-      )
-    );
+  const handleToggleHide = async (id: string) => {
+    if (!ensureAuthenticated()) return;
+    const entry = journalEntries.find((item) => item.id === id);
+    if (!entry) return;
+
+    try {
+      await updateJournalEntry(userId!, id, { hidden: !entry.hidden });
+      setJournalEntries((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, hidden: !item.hidden } : item))
+      );
+      setError(null);
+    } catch (err) {
+      console.error('Error updating entry visibility:', err);
+      setError(err instanceof Error ? err.message : 'Unable to update entry visibility.');
+      toast({
+        title: 'Failed to update entry',
+        description: err instanceof Error ? err.message : 'Unable to update entry visibility.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -332,6 +436,12 @@ export default function Journal() {
             </Button>
           </div>
         </div>
+
+        {error && (
+          <div className="trading-card mb-6 border border-destructive/40 bg-destructive/10 text-sm text-destructive">
+            <div>{error}</div>
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -405,89 +515,99 @@ export default function Journal() {
 
             {/* Journal Entries */}
             <div className="space-y-4">
-              {filteredEntries.map((entry) => (
-                <Card key={entry.id} className="bg-card border-border">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <CardTitle className="text-lg text-white">{entry.title}</CardTitle>
-                          {getPerformanceBadge(entry.performance)}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date(entry.date).toLocaleDateString()}
-                          </span>
-                          <span>{entry.tradesCount} trades</span>
-                          <span className={cn('font-medium', getPnLColor(entry.pnl))}>
-                            {formatPnL(entry.pnl)}
-                          </span>
-                          <span className={cn('capitalize', getMoodColor(entry.mood))}>
-                            {entry.mood}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleToggleHide(entry.id)}
-                         className="hover:bg-accent hover:text-accent-foreground"
-                        >
-                          {entry.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditEntry(entry, 'journal')}
-                          className="hover:bg-accent hover:text-accent-foreground"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDeleteEntry(entry.id, 'journal')}
-                         className="hover:bg-destructive/20 hover:text-red-400"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-400" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-sm leading-relaxed text-slate-300">{entry.content}</p>
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Tags</h4>
-                          <div className="flex gap-2 flex-wrap">
-                            {entry.tags.map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs border-slate-600">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {tag}
-                              </Badge>
-                            ))}
+              {entriesLoading ? (
+                <div className="py-12 text-center text-muted-foreground">Loading journal entries...</div>
+              ) : filteredEntries.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground">
+                  {searchTerm || selectedFilter !== 'all' || showHidden
+                    ? 'No journal entries match your filters.'
+                    : 'No journal entries yet. Add your first entry to get started.'}
+                </div>
+              ) : (
+                filteredEntries.map((entry) => (
+                  <Card key={entry.id} className="bg-card border-border">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <CardTitle className="text-lg text-white">{entry.title}</CardTitle>
+                            {getPerformanceBadge(entry.performance)}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {new Date(entry.date).toLocaleDateString()}
+                            </span>
+                            <span>{entry.tradesCount} trades</span>
+                            <span className={cn('font-medium', getPnLColor(entry.pnl))}>
+                              {formatPnL(entry.pnl)}
+                            </span>
+                            <span className={cn('capitalize', getMoodColor(entry.mood))}>
+                              {entry.mood}
+                            </span>
                           </div>
                         </div>
-                        
-                        <div className="grid md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleHide(entry.id)}
+                            className="hover:bg-accent hover:text-accent-foreground"
+                          >
+                            {entry.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditEntry(entry, 'journal')}
+                            className="hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteEntry(entry.id, 'journal')}
+                            className="hover:bg-destructive/20 hover:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <p className="text-sm leading-relaxed text-slate-300">{entry.content}</p>
+
+                        <div className="space-y-3">
                           <div>
-                            <h4 className="font-medium mb-1 text-green-400">Lessons Learned</h4>
-                            <p className="text-slate-400">{entry.lessons}</p>
+                            <h4 className="text-sm font-medium mb-2">Tags</h4>
+                            <div className="flex gap-2 flex-wrap">
+                              {entry.tags.map((tag) => (
+                                <Badge key={tag} variant="outline" className="text-xs border-slate-600">
+                                  <Tag className="h-3 w-3 mr-1" />
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium mb-1 text-blue-400">Areas for Improvement</h4>
-                            <p className="text-slate-400">{entry.improvements}</p>
+
+                          <div className="grid md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <h4 className="font-medium mb-1 text-green-400">Lessons Learned</h4>
+                              <p className="text-slate-400">{entry.lessons}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-medium mb-1 text-blue-400">Areas for Improvement</h4>
+                              <p className="text-slate-400">{entry.improvements}</p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
@@ -531,70 +651,82 @@ export default function Journal() {
 
             {/* Lessons Library */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredLessons.map((lesson) => (
-                <Card key={lesson.id} className="bg-card border-border">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <CardTitle className="text-lg text-white flex items-center gap-2">
-                          <Lightbulb className="h-5 w-5 text-yellow-400" />
-                          {lesson.title}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <CardDescription className="text-slate-400">{lesson.category}</CardDescription>
-                          {getImportanceBadge(lesson.importance)}
+              {lessonsLoading ? (
+                <div className="col-span-full py-12 text-center text-muted-foreground">
+                  Loading lessons...
+                </div>
+              ) : filteredLessons.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-muted-foreground">
+                  {searchTerm || selectedCategory !== 'All Categories'
+                    ? 'No lessons match your filters.'
+                    : 'No lessons saved yet. Add lessons to build your playbook.'}
+                </div>
+              ) : (
+                filteredLessons.map((lesson) => (
+                  <Card key={lesson.id} className="bg-card border-border">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <CardTitle className="text-lg text-white flex items-center gap-2">
+                            <Lightbulb className="h-5 w-5 text-yellow-400" />
+                            {lesson.title}
+                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardDescription className="text-slate-400">{lesson.category}</CardDescription>
+                            {getImportanceBadge(lesson.importance)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditEntry(lesson, 'lesson')}
+                            className="hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteEntry(lesson.id, 'lesson')}
+                            className="hover:bg-destructive/20 hover:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditEntry(lesson, 'lesson')}
-                          className="hover:bg-accent hover:text-accent-foreground"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDeleteEntry(lesson.id, 'lesson')}
-                          className="hover:bg-destructive/20 hover:text-red-400"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-400" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-sm leading-relaxed text-slate-300">{lesson.content}</p>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-center">
-                        <div>
-                          <div className="text-lg font-bold text-blue-400">{lesson.timesApplied}</div>
-                          <div className="text-xs text-slate-500">Times Applied</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-green-400">{lesson.successRate}%</div>
-                          <div className="text-xs text-slate-500">Success Rate</div>
-                        </div>
-                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <p className="text-sm leading-relaxed text-slate-300">{lesson.content}</p>
 
-                      <div className="flex gap-2 flex-wrap">
-                        {lesson.tags.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs border-slate-600">
-                            {tag}
-                          </Badge>
-                        ))}
+                        <div className="grid grid-cols-2 gap-4 text-center">
+                          <div>
+                            <div className="text-lg font-bold text-blue-400">{lesson.timesApplied}</div>
+                            <div className="text-xs text-slate-500">Times Applied</div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-bold text-green-400">{lesson.successRate}%</div>
+                            <div className="text-xs text-slate-500">Success Rate</div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          {lesson.tags.map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-xs border-slate-600">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+
+                        <p className="text-xs text-slate-500">
+                          Added {new Date(lesson.dateAdded).toLocaleDateString()}
+                        </p>
                       </div>
-                      
-                      <p className="text-xs text-slate-500">
-                        Added {new Date(lesson.dateAdded).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
@@ -687,8 +819,8 @@ export default function Journal() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => setIsDialogOpen(false)}
-                 className="hover:bg-accent hover:text-accent-foreground"
+                  onClick={closeDialog}
+                  className="hover:bg-accent hover:text-accent-foreground"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -703,7 +835,7 @@ export default function Journal() {
                         <label className="text-sm text-slate-300">Lesson Title*</label>
                         <Input
                           value={currentEntry?.title || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, title: e.target.value})}
+                          onChange={(e) => setCurrentEntry((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
                           placeholder="Key lesson or principle"
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
@@ -712,7 +844,7 @@ export default function Journal() {
                         <label className="text-sm text-slate-300">Category*</label>
                         <Select
                           value={currentEntry?.category || ''}
-                          onValueChange={(value) => setCurrentEntry({...currentEntry, category: value})}
+                          onValueChange={(value) => setCurrentEntry((prev) => (prev ? { ...prev, category: value } : prev))}
                         >
                           <SelectTrigger className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground">
                             <SelectValue placeholder="Select category" />
@@ -731,7 +863,7 @@ export default function Journal() {
                       <Textarea
                         rows={4}
                         value={currentEntry?.content || ''}
-                        onChange={(e) => setCurrentEntry({...currentEntry, content: e.target.value})}
+                        onChange={(e) => setCurrentEntry((prev) => (prev ? { ...prev, content: e.target.value } : prev))}
                         placeholder="Describe the lesson in detail, including context and application"
                        className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                       />
@@ -742,7 +874,7 @@ export default function Journal() {
                         <label className="text-sm text-slate-300">Importance Level*</label>
                         <Select
                           value={currentEntry?.importance || ''}
-                          onValueChange={(value) => setCurrentEntry({...currentEntry, importance: value})}
+                          onValueChange={(value) => setCurrentEntry((prev) => (prev ? { ...prev, importance: value } : prev))}
                         >
                           <SelectTrigger className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground">
                             <SelectValue placeholder="Select importance" />
@@ -760,7 +892,11 @@ export default function Journal() {
                         <Input
                           type="number"
                           value={currentEntry?.timesApplied || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, timesApplied: parseInt(e.target.value) || 0})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) =>
+                              prev ? { ...prev, timesApplied: parseInt(e.target.value, 10) || 0 } : prev
+                            )
+                          }
                           placeholder="0"
                          className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
@@ -773,7 +909,11 @@ export default function Journal() {
                           min="0"
                           max="100"
                           value={currentEntry?.successRate || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, successRate: parseInt(e.target.value) || 0})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) =>
+                              prev ? { ...prev, successRate: parseInt(e.target.value, 10) || 0 } : prev
+                            )
+                          }
                           placeholder="0"
                          className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
@@ -785,15 +925,23 @@ export default function Journal() {
                       <div className="flex gap-2 items-center">
                         <Input
                           value={currentEntry?.newTag || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, newTag: e.target.value})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, newTag: e.target.value } : prev))
+                          }
                           placeholder="Add tag (press Enter)"
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && currentEntry?.newTag?.trim()) {
-                              setCurrentEntry({
-                                ...currentEntry,
-                                tags: [...(currentEntry?.tags || []), currentEntry.newTag.trim()],
-                                newTag: ''
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              setCurrentEntry((prev) => {
+                                if (!prev) return prev;
+                                const tagValue = prev.newTag?.trim();
+                                if (!tagValue) return prev;
+                                return {
+                                  ...prev,
+                                  tags: [...(prev.tags || []), tagValue],
+                                  newTag: '',
+                                };
                               });
                             }
                           }}
@@ -801,13 +949,16 @@ export default function Journal() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            if (currentEntry?.newTag?.trim()) {
-                              setCurrentEntry({
-                                ...currentEntry,
-                                tags: [...(currentEntry?.tags || []), currentEntry.newTag.trim()],
-                                newTag: ''
-                              });
-                            }
+                            setCurrentEntry((prev) => {
+                              if (!prev) return prev;
+                              const tagValue = prev.newTag?.trim();
+                              if (!tagValue) return prev;
+                              return {
+                                ...prev,
+                                tags: [...(prev.tags || []), tagValue],
+                                newTag: '',
+                              };
+                            });
                           }}
                          className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
                         >
@@ -820,9 +971,12 @@ export default function Journal() {
                             {tag}
                             <button
                               onClick={() => {
-                                setCurrentEntry({
-                                  ...currentEntry,
-                                  tags: currentEntry.tags.filter((_, i) => i !== index)
+                                setCurrentEntry((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    tags: prev.tags?.filter((_, i) => i !== index) ?? [],
+                                  };
                                 });
                               }}
                              className="ml-1 hover:text-red-400 transition-colors"
@@ -842,7 +996,9 @@ export default function Journal() {
                         <label className="text-sm text-slate-300">Title*</label>
                         <Input
                           value={currentEntry?.title || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, title: e.target.value})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, title: e.target.value } : prev))
+                          }
                           placeholder="Trade setup description"
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
@@ -852,7 +1008,9 @@ export default function Journal() {
                         <Input
                           type="date"
                           value={currentEntry?.date || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, date: e.target.value})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, date: e.target.value } : prev))
+                          }
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
                       </div>
@@ -863,7 +1021,9 @@ export default function Journal() {
                       <Textarea
                         rows={4}
                         value={currentEntry?.content || ''}
-                        onChange={(e) => setCurrentEntry({...currentEntry, content: e.target.value})}
+                        onChange={(e) =>
+                          setCurrentEntry((prev) => (prev ? { ...prev, content: e.target.value } : prev))
+                        }
                         placeholder="Describe your trade execution, strategy, and observations"
                        className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                       />
@@ -874,7 +1034,9 @@ export default function Journal() {
                         <label className="text-sm text-slate-300">Performance Rating*</label>
                         <Select
                           value={currentEntry?.performance || ''}
-                          onValueChange={(value) => setCurrentEntry({...currentEntry, performance: value})}
+                          onValueChange={(value) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, performance: value } : prev))
+                          }
                         >
                           <SelectTrigger className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground">
                             <SelectValue placeholder="Select rating" />
@@ -893,7 +1055,11 @@ export default function Journal() {
                         <Input
                           type="number"
                           value={currentEntry?.tradesCount || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, tradesCount: parseInt(e.target.value) || 0})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) =>
+                              prev ? { ...prev, tradesCount: parseInt(e.target.value, 10) || 0 } : prev
+                            )
+                          }
                          className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
                       </div>
@@ -903,7 +1069,11 @@ export default function Journal() {
                         <Input
                           type="number"
                           value={currentEntry?.pnl || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, pnl: parseFloat(e.target.value) || 0})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) =>
+                              prev ? { ...prev, pnl: parseFloat(e.target.value) || 0 } : prev
+                            )
+                          }
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
                       </div>
@@ -912,7 +1082,9 @@ export default function Journal() {
                         <label className="text-sm text-slate-300">Mood/Confidence*</label>
                         <Select
                           value={currentEntry?.mood || ''}
-                          onValueChange={(value) => setCurrentEntry({...currentEntry, mood: value})}
+                          onValueChange={(value) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, mood: value } : prev))
+                          }
                         >
                           <SelectTrigger className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground">
                             <SelectValue placeholder="Select mood" />
@@ -932,15 +1104,23 @@ export default function Journal() {
                       <div className="flex gap-2 items-center">
                         <Input
                           value={currentEntry?.newTag || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, newTag: e.target.value})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, newTag: e.target.value } : prev))
+                          }
                           placeholder="Add tag (press Enter)"
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && currentEntry?.newTag?.trim()) {
-                              setCurrentEntry({
-                                ...currentEntry,
-                                tags: [...(currentEntry?.tags || []), currentEntry.newTag.trim()],
-                                newTag: ''
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              setCurrentEntry((prev) => {
+                                if (!prev) return prev;
+                                const tagValue = prev.newTag?.trim();
+                                if (!tagValue) return prev;
+                                return {
+                                  ...prev,
+                                  tags: [...(prev.tags || []), tagValue],
+                                  newTag: '',
+                                };
                               });
                             }
                           }}
@@ -948,13 +1128,16 @@ export default function Journal() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            if (currentEntry?.newTag?.trim()) {
-                              setCurrentEntry({
-                                ...currentEntry,
-                                tags: [...(currentEntry?.tags || []), currentEntry.newTag.trim()],
-                                newTag: ''
-                              });
-                            }
+                            setCurrentEntry((prev) => {
+                              if (!prev) return prev;
+                              const tagValue = prev.newTag?.trim();
+                              if (!tagValue) return prev;
+                              return {
+                                ...prev,
+                                tags: [...(prev.tags || []), tagValue],
+                                newTag: '',
+                              };
+                            });
                           }}
                           className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
                         >
@@ -967,9 +1150,12 @@ export default function Journal() {
                             {tag}
                             <button
                               onClick={() => {
-                                setCurrentEntry({
-                                  ...currentEntry,
-                                  tags: currentEntry.tags.filter((_, i) => i !== index)
+                                setCurrentEntry((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    tags: prev.tags?.filter((_, i) => i !== index) ?? [],
+                                  };
                                 });
                               }}
                               className="ml-1 hover:text-red-400 transition-colors"
@@ -987,7 +1173,9 @@ export default function Journal() {
                         <Textarea
                           rows={3}
                           value={currentEntry?.lessons || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, lessons: e.target.value})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, lessons: e.target.value } : prev))
+                          }
                           placeholder="What did you learn from this trading session?"
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
@@ -997,7 +1185,9 @@ export default function Journal() {
                         <Textarea
                           rows={3}
                           value={currentEntry?.improvements || ''}
-                          onChange={(e) => setCurrentEntry({...currentEntry, improvements: e.target.value})}
+                          onChange={(e) =>
+                            setCurrentEntry((prev) => (prev ? { ...prev, improvements: e.target.value } : prev))
+                          }
                           placeholder="What could you do better next time?"
                           className="pl-10 bg-input border-input text-foreground placeholder:text-muted-foreground"
                         />
@@ -1009,18 +1199,19 @@ export default function Journal() {
                 <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
                   <Button 
                     variant="outline" 
-                    onClick={() => setIsDialogOpen(false)}
-                   className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    onClick={closeDialog}
+                    className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleSaveEntry}
-                   className="trading-gradient text-white"
+                    className="trading-gradient text-white"
+                    disabled={isSaving}
                   >
                     <Check className="h-4 w-4 mr-2" />
-                    Save {entryType === 'lesson' ? 'Lesson' : 'Entry'}
+                    {isSaving ? 'Saving...' : `Save ${entryType === 'lesson' ? 'Lesson' : 'Entry'}`}
                   </Button>
                 </div>
               </div>

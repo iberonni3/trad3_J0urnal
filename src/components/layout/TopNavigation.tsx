@@ -13,17 +13,20 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { signOut } from "@/lib/supabase/auth";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/components/theme-provider";
 import { useToast } from "@/hooks/use-toast";
+import { useAccount } from "@/context/AccountContext";
 
 export function TopNavigation() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { setTheme, theme } = useTheme();
   const { toast } = useToast();
+  const { accounts, selectedAccount, selectAccount } = useAccount();
 
   const handleLogout = async () => {
     try {
@@ -51,7 +54,8 @@ export function TopNavigation() {
     setTheme(theme === "light" ? "dark" : "light");
   };
 
-  const userInitial = user?.email?.[0]?.toUpperCase() || "U";
+  const userInitial =
+    user?.user_metadata?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U";
 
   return (
     <header className="h-14 sm:h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -64,6 +68,20 @@ export function TopNavigation() {
               className="pl-10 w-full bg-muted/50 border-muted"
             />
           </div>
+          {accounts.length > 0 && (
+            <Select value={selectedAccount?.id ?? undefined} onValueChange={selectAccount}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3">
@@ -92,7 +110,7 @@ export function TopNavigation() {
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:block font-medium">
-                  {user?.email || "User"}
+                  {user?.user_metadata?.display_name || user?.email || "User"}
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -107,7 +125,7 @@ export function TopNavigation() {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/settings')}>
                 <User className="mr-2 h-4 w-4" />
                 Profile Settings
               </DropdownMenuItem>
