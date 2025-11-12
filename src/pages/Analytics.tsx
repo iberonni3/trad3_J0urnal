@@ -244,7 +244,7 @@ export default function Analytics() {
     // Calculate current month trades
     const now = new Date();
     const currentMonthTrades = trades.filter(t => {
-      const tradeDate = t.openTime;
+      const tradeDate = new Date(t.openTime);
       return tradeDate.getMonth() === now.getMonth() && 
              tradeDate.getFullYear() === now.getFullYear();
     });

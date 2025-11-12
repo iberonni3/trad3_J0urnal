@@ -129,6 +129,9 @@ const processTradeAnalytics = (trades: any[]): TradeMetrics => {
   };
 };
 
+// Note: This function requires a database RPC function that hasn't been created yet
+// Uncomment and use when the get_monthly_performance RPC function is added to the database
+/*
 export const fetchMonthlyPerformance = async (userId: string, months: number = 6) => {
   const { data, error } = await supabase.rpc('get_monthly_performance', {
     user_id: userId,
@@ -142,6 +145,7 @@ export const fetchMonthlyPerformance = async (userId: string, months: number = 6
 
   return data || [];
 };
+*/
 
 export const fetchSymbolPerformance = async (userId: string) => {
   const { data, error } = await supabase

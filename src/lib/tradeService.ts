@@ -15,11 +15,11 @@ export const getUserTrades = async (userId: string): Promise<Trade[]> => {
 
     // Convert string dates to Date objects and map ALL fields explicitly
     return (data || []).map(trade => {
-      const mappedTrade = {
+      const mappedTrade: Trade = {
         id: trade.id,
         userId: trade.user_id,
         symbol: trade.symbol,
-        direction: trade.direction,
+        direction: trade.direction as 'long' | 'short',
         entry: trade.entry,
         exit: trade.exit,
         stopLoss: trade.stop_loss,
@@ -29,7 +29,7 @@ export const getUserTrades = async (userId: string): Promise<Trade[]> => {
         rMultiple: trade.r_multiple || 0,
         openTime: new Date(trade.open_time),
         closeTime: trade.close_time ? new Date(trade.close_time) : null,
-        status: trade.status,
+        status: trade.status as 'open' | 'closed',
         setup: trade.setup || '',
         tags: trade.tags || [],
         broker: trade.broker || '',
@@ -91,8 +91,8 @@ export const updateTrade = async (id: string, updates: Partial<TradeInput>): Pro
       .from('trades')
       .update({
         ...updates,
-        ...(updates.openTime && { open_time: updates.openTime }),
-        ...(updates.closeTime && { close_time: updates.closeTime }),
+        ...(updates.openTime && { open_time: updates.openTime.toISOString() }),
+        ...(updates.closeTime && { close_time: updates.closeTime.toISOString() }),
         ...(updates.stopLoss && { stop_loss: updates.stopLoss }),
         ...(updates.takeProfit && { take_profit: updates.takeProfit }),
         ...(updates.screenshotUrl && { screenshot_url: updates.screenshotUrl }),
