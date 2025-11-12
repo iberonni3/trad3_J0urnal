@@ -2,42 +2,43 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface TradingCalendarHeatmapProps {
   data: { date: string; profitLoss: number }[];
   equityRef?: React.RefObject<HTMLDivElement>;
 }
 
-// Helper functions to replace date-fns
+// Helper functions
 const getStartOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 const getEndOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0);
-const addMonths = (date: Date, months: number) => new Date(date.getFullYear(), date.getMonth() + months, 1);
-const subMonths = (date: Date, months: number) => new Date(date.getFullYear(), date.getMonth() - months, 1);
-const formatDate = (date: Date, format: string) => {
-  if (format === 'yyyy-MM-dd') {
-    return date.toISOString().split('T')[0];
-  }
-  if (format === 'MMM yyyy') {
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  }
-  if (format === 'd') {
-    return date.getDate().toString();
-  }
-  if (format === 'MMM d, yyyy') {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-  return date.toLocaleDateString();
-};
 const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
-const isAfter = (date1: Date, date2: Date) => date1 > date2;
 
-const getDaysInMonth = (year: number, month: number) => {
-  const days = [];
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  for (let day = 1; day <= lastDay; day++) {
-    days.push(new Date(year, month, day));
+const formatDate = (date: Date, formatStr: string) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  if (formatStr === 'yyyy-MM-dd') {
+    return `${year}-${month}-${day}`;
   }
-  return days;
+  if (formatStr === 'MMM yyyy') {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[date.getMonth()]} ${year}`;
+  }
+  return date.toISOString();
+};
+
+const subMonths = (date: Date, months: number) => {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() - months);
+  return newDate;
+};
+
+const addMonths = (date: Date, months: number) => {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() + months);
+  return newDate;
 };
 
 const getCalendarGrid = (year: number, month: number) => {
@@ -86,7 +87,7 @@ export function TradingCalendarHeatmap({ data = [], equityRef }: TradingCalendar
       const calendarData = weeks.map(week => 
         week.map(date => {
           const dateStr = formatDate(date, 'yyyy-MM-dd');
-          const isCurrentMonth = date >= monthStart && date <= monthEnd;
+          const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
           const dayData = data.find(d => d.date === dateStr);
           
           return {
@@ -99,121 +100,94 @@ export function TradingCalendarHeatmap({ data = [], equityRef }: TradingCalendar
           };
         })
       );
-
-      return {
-        calendarGrid: calendarData,
-        monthStart,
-        monthEnd
-      };
+      
+      return { calendarGrid: calendarData, monthStart, monthEnd };
     } catch (error) {
       console.error('Error generating calendar data:', error);
       return { calendarGrid: [], monthStart: new Date(), monthEnd: new Date() };
     }
-  }, [data, currentMonth]);
+  }, [currentMonth, data]);
 
-  const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
-  const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
-  const isNextDisabled = isAfter(currentMonth, subMonths(getStartOfMonth(new Date()), 1));
-
-  const { cellSize, fontSize } = useMemo(() => {
-    const headerHeight = 20;
-    const padding = 8;
-    const availableHeight = containerHeight - headerHeight - padding;
-    const cellSize = Math.floor(availableHeight / 6) - 2; // 6 weeks, minus gap
-    const fontSize = Math.max(8, Math.floor(cellSize * 0.3));
-    
-    return { cellSize: Math.max(20, cellSize), fontSize };
-  }, [containerHeight]);
-
-  const weekdayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-  const getCellColor = (day) => {
-    if (!day.isCurrentMonth) return '#f1f5f9'; // Very light gray for other months
-    if (day.profitLoss === null) {
-      return day.isWeekend ? '#e2e8f0' : '#f8fafc'; // Slightly different for weekends
-    }
-    return day.profitLoss > 0 ? '#22c55e' : '#ef4444'; // Green for profit, red for loss
+  const handlePrevMonth = () => {
+    setCurrentMonth(prev => subMonths(prev, 1));
   };
 
-  const getCellTitle = (day) => {
-    if (!day.isCurrentMonth) return '';
-    const dateStr = formatDate(day.date, 'MMM d, yyyy');
-    if (day.profitLoss === null) return `${dateStr}: No trades`;
-    return `${dateStr}: $${day.profitLoss}`;
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => addMonths(prev, 1));
   };
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-0 px-4 pt-3">
-        <div className="flex items-center justify-between w-full">
+    <Card className="trading-card">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Trading Activity</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={handlePrevMonth} className="h-8 w-8 p-0">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePrevMonth}
+              className="h-8 w-8"
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-sm font-medium w-24 text-center">{formatDate(currentMonth, 'MMM yyyy')}</div>
-            <Button variant="outline" size="sm" onClick={handleNextMonth} disabled={isNextDisabled} className="h-8 w-8 p-0">
+            <span className="text-sm font-medium min-w-[90px] text-center">
+              {formatDate(currentMonth, 'MMM yyyy')}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNextMonth}
+              className="h-8 w-8"
+              disabled={new Date() < new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </CardHeader>
-
-      <CardContent className="p-4">
-        <div className="w-full" ref={heatmapContainerRef}>
-          {calendarGrid.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {/* Weekday headers */}
-              <div className="grid grid-cols-7 gap-2 mb-2">
-                {weekdayLabels.map((label, index) => (
-                  <div
-                    key={index}
-                    className="text-center text-xs text-muted-foreground font-medium flex items-center justify-center"
-                    style={{ 
-                      width: `${cellSize}px`,
-                      height: '20px',
-                      fontSize: `${fontSize}px`
-                    }}
-                  >
-                    {label}
-                  </div>
-                ))}
+      <CardContent>
+        <div className="h-[300px] w-full flex flex-col">
+          <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-medium text-muted-foreground mb-2">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+              <div key={day} className="flex items-center justify-center">
+                {day}
               </div>
-              
-              {/* Calendar grid */}
-              {calendarGrid.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-7 gap-2">
-                  {week.map((day, dayIndex) => (
-                    <div
-                      key={dayIndex}
-                      title={getCellTitle(day)}
-                      className="relative rounded cursor-pointer transition-opacity hover:opacity-80"
-                      style={{
-                        width: `${cellSize}px`,
-                        height: `${cellSize}px`,
-                        backgroundColor: getCellColor(day),
-                        opacity: day.isCurrentMonth ? 1 : 0.3
-                      }}
-                    >
-                      <div 
-                        className="absolute inset-0 flex items-center justify-center text-xs font-medium"
-                        style={{ 
-                          fontSize: `${fontSize}px`,
-                          color: day.profitLoss !== null ? '#fff' : '#64748b'
-                        }}
-                      >
-                        {formatDate(day.date, 'd')}
-                      </div>
-                    </div>
-                  ))}
+            ))}
+          </div>
+          <div className="grid grid-cols-7 auto-rows-fr gap-1.5 flex-1">
+            {calendarGrid.flat().map((day, index) => {
+              const isCurrentMonth = day.isCurrentMonth;
+              const isActive = isCurrentMonth && day.profitLoss !== null;
+              const isProfit = day.profitLoss && day.profitLoss > 0;
+              const isLoss = day.profitLoss && day.profitLoss < 0;
+              const isToday = new Date().toDateString() === day.date.toDateString();
+
+              return (
+                <div
+                  key={index}
+                  className={cn(
+                    'rounded-md flex items-center justify-center relative text-xs transition-colors min-h-0',
+                    !isCurrentMonth && 'opacity-30 text-muted-foreground',
+                    isCurrentMonth && !isActive && 'hover:bg-muted/50',
+                    isActive && 'font-semibold',
+                    isProfit && 'bg-green-500/20 text-green-700 dark:bg-green-500/20 dark:text-green-400',
+                    isLoss && 'bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+                    isToday && 'ring-2 ring-primary'
+                  )}
+                  title={day.profitLoss !== null ? `P&L: ${day.profitLoss.toFixed(2)}` : 'No trades'}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <span>{day.date.getDate()}</span>
+                    {isActive && (
+                      <span className="text-[10px] opacity-70 leading-none mt-0.5">
+                        {isProfit ? '▲' : isLoss ? '▼' : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              No data available for this period
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

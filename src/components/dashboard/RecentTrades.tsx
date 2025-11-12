@@ -13,72 +13,20 @@ import { ArrowUpRight, ArrowDownRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-// Sample trades data
-const recentTrades = [
-  {
-    id: '1',
-    symbol: 'EURUSD',
-    direction: 'long',
-    entry: 1.0875,
-    exit: 1.0920,
-    pnl: 450.00,
-    rMultiple: 2.1,
-    timestamp: '2024-03-15 14:30:00',
-    status: 'closed',
-    setup: 'Breakout'
-  },
-  {
-    id: '2',
-    symbol: 'GBPJPY',
-    direction: 'short',
-    entry: 189.45,
-    exit: 188.92,
-    pnl: -265.00,
-    rMultiple: -1.3,
-    timestamp: '2024-03-15 09:15:00',
-    status: 'closed',
-    setup: 'Reversal'
-  },
-  {
-    id: '3',
-    symbol: 'XAUUSD',
-    direction: 'long',
-    entry: 2018.75,
-    exit: 2025.30,
-    pnl: 655.00,
-    rMultiple: 1.8,
-    timestamp: '2024-03-14 16:45:00',
-    status: 'closed',
-    setup: 'Support'
-  },
-  {
-    id: '4',
-    symbol: 'USDJPY',
-    direction: 'short',
-    entry: 149.85,
-    exit: null,
-    pnl: 0,
-    rMultiple: 0,
-    timestamp: '2024-03-15 18:20:00',
-    status: 'open',
-    setup: 'Trend'
-  },
-  {
-    id: '5',
-    symbol: 'BTCUSD',
-    direction: 'long',
-    entry: 42150.00,
-    exit: 43200.00,
-    pnl: 1050.00,
-    rMultiple: 3.2,
-    timestamp: '2024-03-13 11:30:00',
-    status: 'closed',
-    setup: 'Momentum'
-  }
-];
+import { Trade } from '@/types/trade';
 
-export function RecentTrades() {
+interface RecentTradesProps {
+  trades?: Trade[];
+  maxTrades?: number;
+}
+
+export function RecentTrades({ trades = [], maxTrades = 5 }: RecentTradesProps) {
   const navigate = useNavigate();
+
+  // Sort trades by openTime in descending order and limit to maxTrades
+  const recentTrades = [...trades]
+    .sort((a, b) => new Date(b.openTime).getTime() - new Date(a.openTime).getTime())
+    .slice(0, maxTrades);
 
   const handleViewAllClick = () => {
     navigate('/trades');
@@ -87,19 +35,18 @@ export function RecentTrades() {
   const formatPnL = (pnl: number) => {
     if (pnl === 0) return '$0.00';
     const sign = pnl > 0 ? '+' : '';
-    return `${sign}$${pnl.toFixed(2)}`;
+    return `${sign}$${Math.abs(pnl).toFixed(2)}`;
   };
 
   const getPnLColor = (pnl: number) => {
-    if (pnl > 0) return 'text-success';
-    if (pnl < 0) return 'text-danger';
+    if (pnl > 0) return 'text-green-600 dark:text-green-400';
+    if (pnl < 0) return 'text-red-600 dark:text-red-400';
     return 'text-muted-foreground';
   };
 
   const formatRMultiple = (r: number) => {
     if (r === 0) return '0.0R';
-    const sign = r > 0 ? '+' : '';
-    return `${sign}${r.toFixed(1)}R`;
+    return `${r > 0 ? '+' : ''}${r.toFixed(1)}R`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -123,66 +70,88 @@ export function RecentTrades() {
 
   return (
     <Card className="trading-card">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Recent Trades</CardTitle>
-          <CardDescription>
-            Your latest trading activity and performance
-          </CardDescription>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Recent Trades</CardTitle>
+            <CardDescription>
+              {recentTrades.length > 0
+                ? 'Your most recent trading activity'
+                : 'No recent trades found'}
+            </CardDescription>
+          </div>
+          {recentTrades.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={handleViewAllClick} className="text-muted-foreground">
+              View All
+              <ExternalLink className="ml-1 h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
-        <Button variant="outline" size="sm" onClick={handleViewAllClick}>
-          <ExternalLink className="h-4 w-4 mr-2" />
-          View All
-        </Button>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Symbol</TableHead>
-              <TableHead>Direction</TableHead>
-              <TableHead>Entry</TableHead>
-              <TableHead>Exit</TableHead>
-              <TableHead>P&L</TableHead>
-              <TableHead>R Multiple</TableHead>
-              <TableHead>Setup</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recentTrades.map((trade) => (
-              <TableRow key={trade.id} className="hover:bg-muted/50">
-                <TableCell className="font-medium">
-                  {trade.symbol}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getDirectionIcon(trade.direction)}
-                    <span className="capitalize">{trade.direction}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{trade.entry.toFixed(trade.symbol.includes('JPY') ? 2 : 4)}</TableCell>
-                <TableCell>
-                  {trade.exit ? trade.exit.toFixed(trade.symbol.includes('JPY') ? 2 : 4) : '-'}
-                </TableCell>
-                <TableCell className={cn('font-medium', getPnLColor(trade.pnl))}>
-                  {formatPnL(trade.pnl)}
-                </TableCell>
-                <TableCell className={cn('font-medium', getPnLColor(trade.pnl))}>
-                  {formatRMultiple(trade.rMultiple)}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-xs">
-                    {trade.setup}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {getStatusBadge(trade.status)}
-                </TableCell>
+        {recentTrades.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">Symbol</TableHead>
+                <TableHead>Direction</TableHead>
+                <TableHead>Entry</TableHead>
+                <TableHead>Exit</TableHead>
+                <TableHead className="text-right">P&L</TableHead>
+                <TableHead className="text-right">R</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {recentTrades.map((trade) => (
+                <TableRow 
+                  key={trade.id} 
+                  className="cursor-pointer hover:bg-muted/50" 
+                  onClick={() => navigate(`/trades/${trade.id}`)}
+                >
+                  <TableCell className="font-medium">{trade.symbol}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {trade.direction === 'long' ? (
+                        <ArrowUpRight className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <ArrowDownRight className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                      )}
+                      <span className="capitalize">{trade.direction}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{trade.entry.toFixed(5)}</TableCell>
+                  <TableCell>{trade.exit?.toFixed(5) || '-'}</TableCell>
+                  <TableCell className={cn('text-right font-medium', getPnLColor(trade.pnl))}>
+                    {formatPnL(trade.pnl)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge 
+                      variant={trade.rMultiple >= 0 ? 'default' : 'destructive'} 
+                      className={cn(
+                        'px-1.5 py-0.5 text-xs',
+                        trade.rMultiple >= 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''
+                      )}
+                    >
+                      {formatRMultiple(trade.rMultiple)}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <p className="text-sm">No recent trades to display</p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="mt-2"
+              onClick={() => navigate('/trades/new')}
+            >
+              Add Your First Trade
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

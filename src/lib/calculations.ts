@@ -111,30 +111,30 @@ export const calculateAverageRMultiple = (trades: Trade[]): number => {
 
 /**
  * Calculate R-multiple for a single trade
- * R-multiple = P&L / Risk Amount
- * Where Risk Amount = (Entry - StopLoss) * Quantity * LOT_VALUE for long
- * Where LOT_VALUE = $100 per lot
+ * R-multiple = P&L / (Lot Size * 100)
+ * Where Lot Size is the trade quantity and each lot is worth $100
  */
 export const calculateRMultiple = (trade: Trade): number => {
-  if (trade.exit === null) return 0;
+  console.log('DEBUG R-multiple:', { 
+    status: trade.status, 
+    quantity: trade.quantity, 
+    pnl: trade.pnl,
+    statusCheck: trade.status !== 'closed',
+    quantityCheck: !trade.quantity
+  });
+  
+  if (trade.status !== 'closed' || !trade.quantity) return 0;
   
   try {
-    // Calculate the risk per unit
-    const riskPerUnit = trade.direction === 'long'
-      ? trade.entry - trade.stopLoss
-      : trade.stopLoss - trade.entry;
-    
-    if (riskPerUnit <= 0 || !isFinite(riskPerUnit)) return 0;
-    
     // Calculate total risk in USD (using quantity as lots)
     // quantity represents number of lots, each lot = $100
-    const totalRiskAmount = riskPerUnit * trade.quantity * LOT_VALUE;
+    const totalLotValue = trade.quantity * 100; // Each lot is worth $100
     
-    if (totalRiskAmount <= 0 || !isFinite(totalRiskAmount)) return 0;
+    if (totalLotValue <= 0 || !isFinite(totalLotValue)) return 0;
     
-    // R-multiple = P&L / Total Risk Amount
-    const rMultiple = trade.pnl / totalRiskAmount;
-    return isFinite(rMultiple) ? rMultiple : 0;
+    // R-multiple = P&L / (Lot Size * 100)
+    const rMultiple = trade.pnl / totalLotValue;
+    return isFinite(rMultiple) ? parseFloat(rMultiple.toFixed(2)) : 0;
   } catch (error) {
     console.error('Error calculating R-multiple:', error);
     return 0;
@@ -312,4 +312,78 @@ export const formatCurrency = (value: number, currency = 'USD'): string => {
  */
 export const formatPercentage = (value: number, decimals = 1): string => {
   return `${value.toFixed(decimals)}%`;
+};
+
+/**
+ * Calculate equity curve from trades for charting
+ * @param trades - Array of trades
+ * @param startingBalance - Starting account balance (default: 10000)
+ * @returns Array of equity data points for the equity curve chart
+ */
+export const calculateEquityCurve = (
+  trades: Trade[], 
+  startingBalance: number = 10000
+): Array<{ date: string; balance: number; trades: number }> => {
+  // Filter only closed trades with P&L
+  const closedTrades = trades.filter(
+    trade => trade.status === 'closed' && trade.pnl !== undefined && trade.pnl !== null
+  );
+
+  // Sort trades by close time
+  const sortedTrades = [...closedTrades].sort((a, b) => {
+    const timeA = a.closeTime ? new Date(a.closeTime).getTime() : new Date(a.openTime).getTime();
+    const timeB = b.closeTime ? new Date(b.closeTime).getTime() : new Date(b.openTime).getTime();
+    return timeA - timeB;
+  });
+
+  // If no trades, return starting point only
+  if (sortedTrades.length === 0) {
+    return [
+      {
+        date: new Date().toISOString().split('T')[0],
+        balance: startingBalance,
+        trades: 0
+      }
+    ];
+  }
+
+  // Initialize with starting balance
+  const equityData: Array<{ date: string; balance: number; trades: number }> = [];
+  
+  let currentBalance = startingBalance;
+  let tradeCount = 0;
+
+  // Add starting point (before first trade)
+  const firstTradeDate = sortedTrades[0].closeTime 
+    ? new Date(sortedTrades[0].closeTime) 
+    : new Date(sortedTrades[0].openTime);
+  
+  const startDate = new Date(firstTradeDate);
+  startDate.setDate(startDate.getDate() - 1); // One day before first trade
+  
+  equityData.push({
+    date: startDate.toISOString().split('T')[0],
+    balance: startingBalance,
+    trades: 0
+  });
+
+  // Process each trade
+  sortedTrades.forEach(trade => {
+    tradeCount++;
+    currentBalance += trade.pnl || 0;
+    
+    const date = trade.closeTime 
+      ? new Date(trade.closeTime) 
+      : new Date(trade.openTime);
+    
+    const dateStr = date.toISOString().split('T')[0];
+    
+    equityData.push({
+      date: dateStr,
+      balance: Math.round(currentBalance * 100) / 100, // Round to 2 decimals
+      trades: tradeCount
+    });
+  });
+
+  return equityData;
 };

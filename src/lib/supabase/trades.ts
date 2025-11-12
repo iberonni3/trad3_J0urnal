@@ -44,28 +44,56 @@ export const getUserTrades = async (userId: string): Promise<Trade[]> => {
  * Create a new trade
  */
 export const createTrade = async (userId: string, tradeInput: TradeInput): Promise<string> => {
+  console.log('Creating trade with input:', tradeInput);
+  
   // Calculate P&L and R-multiple for closed trades
-  let pnl = tradeInput.pnl ?? 0;
+  let pnl = 0;
   let rMultiple = 0;
 
   if (tradeInput.status === 'closed' && tradeInput.exit) {
+    // IMPORTANT: Use manually entered P&L if provided, otherwise calculate it
+    if (tradeInput.pnl !== undefined && tradeInput.pnl !== null) {
+      // User provided P&L manually - use it as-is
+      pnl = tradeInput.pnl;
+      console.log('Using manually entered P&L:', pnl);
+    } else {
+      // No P&L provided - calculate it from entry/exit
+      const tempTrade: Trade = {
+        id: '',
+        userId,
+        ...tradeInput,
+        exit: tradeInput.exit,
+        closeTime: tradeInput.closeTime || new Date(),
+        pnl: 0,
+        rMultiple: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      pnl = calculatePnL(tempTrade);
+      console.log('Calculated P&L from prices:', pnl);
+    }
+
+    // Now calculate R-multiple with the correct P&L
     const tempTrade: Trade = {
       id: '',
       userId,
       ...tradeInput,
       exit: tradeInput.exit,
       closeTime: tradeInput.closeTime || new Date(),
-      pnl: 0,
+      pnl: pnl, // Use the actual P&L value
       rMultiple: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    if (tradeInput.pnl === undefined) {
-      pnl = calculatePnL(tempTrade);
-    }
-    rMultiple = calculateRMultiple({ ...tempTrade, pnl });
+    rMultiple = calculateRMultiple(tempTrade);
+    console.log('Calculated R-multiple:', rMultiple);
+  } else if (tradeInput.pnl !== undefined && tradeInput.pnl !== null) {
+    // Open trade with P&L provided (unrealized P&L)
+    pnl = tradeInput.pnl;
   }
+
+  console.log('Final values - P&L:', pnl, 'R-multiple:', rMultiple);
 
   const { data, error } = await supabase
     .from('trades')
@@ -94,6 +122,8 @@ export const createTrade = async (userId: string, tradeInput: TradeInput): Promi
     .single();
 
   if (error) throw error;
+  
+  console.log('Trade created successfully with ID:', data.id);
   return data.id;
 };
 
@@ -105,6 +135,8 @@ export const updateTrade = async (
   tradeId: string,
   updates: Partial<TradeInput>
 ): Promise<void> => {
+  console.log('Updating trade:', tradeId, 'with updates:', updates);
+  
   // Get existing trade
   const { data: existingTrade, error: fetchError } = await supabase
     .from('trades')
@@ -120,10 +152,46 @@ export const updateTrade = async (
     ...updates,
   };
 
-  let pnl = updates.pnl ?? Number(existingTrade.pnl);
+  let pnl = Number(existingTrade.pnl);
   let rMultiple = Number(existingTrade.r_multiple);
 
   if (merged.status === 'closed' && merged.exit) {
+    // IMPORTANT: Use manually entered P&L if provided in updates, otherwise calculate it
+    if (updates.pnl !== undefined && updates.pnl !== null) {
+      // User provided P&L manually - use it as-is
+      pnl = updates.pnl;
+      console.log('Using manually entered P&L:', pnl);
+    } else if (updates.entry !== undefined || updates.exit !== undefined || updates.quantity !== undefined) {
+      // Price/quantity changed but no new P&L provided - recalculate
+      const tempTrade: Trade = {
+        id: tradeId,
+        userId,
+        symbol: merged.symbol,
+        direction: merged.direction,
+        entry: Number(merged.entry),
+        exit: Number(merged.exit),
+        stopLoss: Number(merged.stop_loss),
+        takeProfit: Number(merged.take_profit),
+        quantity: Number(merged.quantity),
+        pnl: 0,
+        rMultiple: 0,
+        openTime: new Date(merged.open_time),
+        closeTime: merged.close_time ? new Date(merged.close_time) : null,
+        status: merged.status,
+        setup: merged.setup || '',
+        tags: merged.tags || [],
+        broker: merged.broker || '',
+        commission: Number(merged.commission || 0),
+        notes: merged.notes || '',
+        createdAt: new Date(merged.created_at),
+        updatedAt: new Date(),
+      };
+      pnl = calculatePnL(tempTrade);
+      console.log('Recalculated P&L from prices:', pnl);
+    }
+    // else: keep existing P&L
+
+    // Now calculate R-multiple with the correct P&L
     const tempTrade: Trade = {
       id: tradeId,
       userId,
@@ -134,7 +202,7 @@ export const updateTrade = async (
       stopLoss: Number(merged.stop_loss),
       takeProfit: Number(merged.take_profit),
       quantity: Number(merged.quantity),
-      pnl: 0,
+      pnl: pnl, // Use the actual P&L value
       rMultiple: 0,
       openTime: new Date(merged.open_time),
       closeTime: merged.close_time ? new Date(merged.close_time) : null,
@@ -148,10 +216,11 @@ export const updateTrade = async (
       updatedAt: new Date(),
     };
 
-    if (updates.pnl === undefined) {
-      pnl = calculatePnL(tempTrade);
-    }
-    rMultiple = calculateRMultiple({ ...tempTrade, pnl });
+    rMultiple = calculateRMultiple(tempTrade);
+    console.log('Calculated R-multiple:', rMultiple);
+  } else if (updates.pnl !== undefined && updates.pnl !== null) {
+    // Open trade with P&L update
+    pnl = updates.pnl;
   }
 
   const updateData: any = {
@@ -178,6 +247,8 @@ export const updateTrade = async (
   updateData.pnl = pnl;
   updateData.r_multiple = rMultiple;
 
+  console.log('Saving to database - P&L:', pnl, 'R-multiple:', rMultiple);
+
   const { error } = await supabase
     .from('trades')
     .update(updateData)
@@ -185,6 +256,8 @@ export const updateTrade = async (
     .eq('user_id', userId);
 
   if (error) throw error;
+  
+  console.log('Trade updated successfully');
 };
 
 /**
@@ -207,7 +280,8 @@ export const closeTrade = async (
   userId: string,
   tradeId: string,
   exitPrice: number,
-  closeTime: Date
+  closeTime: Date,
+  manualPnL?: number
 ): Promise<void> => {
   const { data: trade, error: fetchError } = await supabase
     .from('trades')
@@ -242,8 +316,12 @@ export const closeTrade = async (
     updatedAt: new Date(),
   };
 
-  const pnl = calculatePnL(tempTrade);
-  const rMultiple = calculateRMultiple({ ...tempTrade, pnl });
+  // Use manual P&L if provided, otherwise calculate
+  const pnl = manualPnL !== undefined ? manualPnL : calculatePnL(tempTrade);
+  
+  // Update tempTrade with calculated P&L before calculating R-multiple
+  tempTrade.pnl = pnl;
+  const rMultiple = calculateRMultiple(tempTrade);
 
   const { error } = await supabase
     .from('trades')

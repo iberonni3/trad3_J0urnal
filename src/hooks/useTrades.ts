@@ -1,4 +1,4 @@
-// @/hooks/useTrades.ts
+// ...existing code...
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Trade, TradeInput } from '@/types/trade';
@@ -12,19 +12,54 @@ import {
 import { uploadTradeScreenshot } from '@/lib/supabase/storage';
 import { useToast } from '@/hooks/use-toast';
 
+// helper to normalize user id (support id or uid)
+const getUserId = (user: any) => user?.id ?? user?.uid ?? null;
+
+// helper to invalidate trade-related queries
+const invalidateTradeRelatedQueries = (queryClient: any, userId: string | null) => {
+  if (!queryClient) return;
+  console.log('🔁 Invalidating trade-related queries for user:', userId);
+  // primary trades query
+  if (userId) queryClient.invalidateQueries({ queryKey: ['trades', userId] });
+  // invalidate any query whose key contains known dashboard/analytics/calendar identifiers
+  const keysToInvalidate = new Set([
+    'analytics',
+    'calendar',
+    'trades',
+    'account-equity',
+    'activity',
+    'recent-trades',
+    'dashboard',
+  ]);
+  queryClient.invalidateQueries({
+    predicate: (query) => {
+      const qk = query.queryKey;
+      if (!Array.isArray(qk)) return false;
+      return qk.some(k => typeof k === 'string' && keysToInvalidate.has(k));
+    },
+  });
+  // dispatch a browser event for non-react listeners
+  try {
+    window.dispatchEvent(new CustomEvent('trades:updated', { detail: { userId } }));
+  } catch (e) {
+    // noop
+  }
+};
+
 /**
  * Hook to fetch all trades for the current user
  */
 export const useTrades = () => {
   const { user } = useAuth();
-  
+  const userId = getUserId(user);
+
   return useQuery({
-    queryKey: ['trades', user?.uid],
+    queryKey: ['trades', userId],
     queryFn: async () => {
-      if (!user?.uid) throw new Error('User not authenticated');
-      return await getUserTrades(user.uid);
+      if (!userId) throw new Error('User not authenticated');
+      return await getUserTrades(userId);
     },
-    enabled: !!user?.uid,
+    enabled: !!userId,
   });
 };
 
@@ -33,47 +68,48 @@ export const useTrades = () => {
  */
 export const useCreateTrade = (onSuccessCallback?: () => void) => {
   const { user } = useAuth();
+  const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async (tradeInput: TradeInput) => {
-      if (!user?.uid) {
+      if (!userId) {
         console.error('❌ User not authenticated');
         throw new Error('User not authenticated');
       }
-      
+
       console.group('📝 Creating Trade');
       console.log('Trade Input:', tradeInput);
       console.log('Has Screenshot:', !!tradeInput.screenshot);
-      console.log('User ID:', user.id);
-      
+      console.log('User ID:', userId);
+
       try {
         // Create the trade first to get the trade ID
         console.log('Step 1: Creating trade in database...');
-        const tradeId = await createTrade(user.id, tradeInput);
+        const tradeId = await createTrade(userId, tradeInput);
         console.log('✅ Trade created successfully with ID:', tradeId);
-        
+
         // Upload screenshot if provided
         if (tradeInput.screenshot) {
           console.log('Step 2: Uploading screenshot...');
-          
+
           try {
             const screenshotUrl = await uploadTradeScreenshot(
               tradeInput.screenshot,
-              user.id,
+              userId,
               tradeId
             );
             console.log('✅ Screenshot uploaded successfully');
-            
+
             // Update the trade with the screenshot URL
             console.log('Step 3: Updating trade with screenshot URL...');
-            await updateTrade(user.id, tradeId, { screenshotUrl } as any);
+            await updateTrade(userId, tradeId, { screenshotUrl } as any);
             console.log('✅ Trade updated with screenshot URL');
-            
+
           } catch (screenshotError) {
             console.error('❌ Error uploading screenshot:', screenshotError);
-            
+
             toast({
               title: 'Warning',
               description: 'Trade created but screenshot upload failed. You can edit the trade to add a screenshot later.',
@@ -84,7 +120,7 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
         } else {
           console.log('ℹ️ No screenshot provided, skipping upload');
         }
-        
+
         console.groupEnd();
         return tradeId;
       } catch (error) {
@@ -94,16 +130,13 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
       }
     },
     onSuccess: () => {
-      console.log('🔄 Invalidating queries and refetching trades...');
-      queryClient.invalidateQueries({ queryKey: ['trades', user?.uid] });
+      console.log('🔄 CreateTrade onSuccess — refresh related queries');
+      invalidateTradeRelatedQueries(queryClient, userId);
       toast({
         title: 'Success',
         description: 'Trade created successfully',
       });
-      // Call the success callback if provided
-      if (onSuccessCallback) {
-        onSuccessCallback();
-      }
+      if (onSuccessCallback) onSuccessCallback();
     },
     onError: (error: Error) => {
       console.error('❌ Create trade error:', error);
@@ -121,9 +154,10 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
  */
 export const useUpdateTrade = () => {
   const { user } = useAuth();
+  const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async ({
       tradeId,
@@ -132,26 +166,27 @@ export const useUpdateTrade = () => {
       tradeId: string;
       updates: Partial<TradeInput>;
     }) => {
-      if (!user?.uid) throw new Error('User not authenticated');
-      
+      if (!userId) throw new Error('User not authenticated');
+
       console.log('📝 Updating trade:', tradeId);
-      
+
       // Upload new screenshot if provided
       if (updates.screenshot) {
         console.log('📸 Uploading new screenshot...');
         const screenshotUrl = await uploadTradeScreenshot(
           updates.screenshot,
-          user.uid,
+          userId,
           tradeId
         );
         console.log('✅ Screenshot uploaded:', screenshotUrl);
         updates = { ...updates, screenshotUrl } as any;
       }
-      
-      await updateTrade(user.uid, tradeId, updates);
+
+      await updateTrade(userId, tradeId, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trades', user?.uid] });
+      console.log('🔄 UpdateTrade onSuccess — refresh related queries');
+      invalidateTradeRelatedQueries(queryClient, userId);
       toast({
         title: 'Success',
         description: 'Trade updated successfully',
@@ -173,16 +208,18 @@ export const useUpdateTrade = () => {
  */
 export const useDeleteTrade = () => {
   const { user } = useAuth();
+  const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async (tradeId: string) => {
-      if (!user?.uid) throw new Error('User not authenticated');
-      await deleteTrade(user.uid, tradeId);
+      if (!userId) throw new Error('User not authenticated');
+      await deleteTrade(userId, tradeId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trades', user?.uid] });
+      console.log('🔄 DeleteTrade onSuccess — refresh related queries');
+      invalidateTradeRelatedQueries(queryClient, userId);
       toast({
         title: 'Success',
         description: 'Trade deleted successfully',
@@ -204,9 +241,10 @@ export const useDeleteTrade = () => {
  */
 export const useCloseTrade = () => {
   const { user } = useAuth();
+  const userId = getUserId(user);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async ({
       tradeId,
@@ -217,11 +255,12 @@ export const useCloseTrade = () => {
       exitPrice: number;
       closeTime: Date;
     }) => {
-      if (!user?.uid) throw new Error('User not authenticated');
-      await closeTrade(user.uid, tradeId, exitPrice, closeTime);
+      if (!userId) throw new Error('User not authenticated');
+      await closeTrade(userId, tradeId, exitPrice, closeTime);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trades', user?.uid] });
+      console.log('🔄 CloseTrade onSuccess — refresh related queries');
+      invalidateTradeRelatedQueries(queryClient, userId);
       toast({
         title: 'Success',
         description: 'Trade closed successfully',

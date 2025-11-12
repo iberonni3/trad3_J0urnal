@@ -1,0 +1,93 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[];
+
+export interface Database {
+  public: {
+    Tables: {
+      trades: {
+        Row: {
+          id: string;
+          user_id: string;
+          symbol: string;
+          direction: 'long' | 'short';
+          entry: number;
+          exit: number | null;
+          stop_loss: number | null;
+          take_profit: number | null;
+          quantity: number;
+          pnl: number | null;
+          r_multiple: number | null;
+          open_time: string; // ISO datetime
+          close_time: string | null;
+          status: 'open' | 'closed' | string;
+          setup: string;
+          tags: string[]; // text[] in DB
+          broker: string | null;
+          commission: number | null;
+          notes: string | null;
+          screenshot_url: string | null;
+          screenshot_path: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          symbol: string;
+          direction: 'long' | 'short';
+          entry: number;
+          exit?: number | null;
+          stop_loss?: number | null;
+          take_profit?: number | null;
+          quantity: number;
+          pnl?: number | null;
+          r_multiple?: number | null;
+          open_time: string;
+          close_time?: string | null;
+          status?: 'open' | 'closed' | string;
+          setup?: string;
+          tags?: string[];
+          broker?: string | null;
+          commission?: number | null;
+          notes?: string | null;
+          screenshot_url?: string | null;
+          screenshot_path?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          symbol?: string;
+          direction?: 'long' | 'short';
+          entry?: number;
+          exit?: number | null;
+          stop_loss?: number | null;
+          take_profit?: number | null;
+          quantity?: number;
+          pnl?: number | null;
+          r_multiple?: number | null;
+          open_time?: string;
+          close_time?: string | null;
+          status?: 'open' | 'closed' | string;
+          setup?: string;
+          tags?: string[];
+          broker?: string | null;
+          commission?: number | null;
+          notes?: string | null;
+          screenshot_url?: string | null;
+          screenshot_path?: string | null;
+          created_at?: string;
+        };
+      };
+      // add other tables here if needed
+    };
+    Views: {};
+    Functions: {};
+    Enums: {};
+    CompositeTypes: {};
+  };
+}

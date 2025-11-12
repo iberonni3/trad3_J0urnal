@@ -148,7 +148,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Trades Table */}
-      <RecentTrades />
+      <RecentTrades trades={trades || []} />
     </div>
   );
 }

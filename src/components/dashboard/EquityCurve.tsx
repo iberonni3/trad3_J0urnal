@@ -1,3 +1,5 @@
+// ...existing code...
+import { useEffect, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -9,26 +11,82 @@ import {
   ReferenceLine
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { getUserTrades } from '@/lib/supabase/trades';
+import { format, parseISO } from 'date-fns';
+import { Trade as TradeType } from '@/types/trade';
 
-// Sample data for the equity curve
-const equityData = [
-  { date: '2024-01-01', balance: 10000, trades: 0 },
-  { date: '2024-01-05', balance: 10150, trades: 3 },
-  { date: '2024-01-10', balance: 9980, trades: 7 },
-  { date: '2024-01-15', balance: 10300, trades: 12 },
-  { date: '2024-01-20', balance: 10450, trades: 18 },
-  { date: '2024-01-25', balance: 10200, trades: 24 },
-  { date: '2024-02-01', balance: 10680, trades: 31 },
-  { date: '2024-02-05', balance: 10520, trades: 36 },
-  { date: '2024-02-10', balance: 10890, trades: 42 },
-  { date: '2024-02-15', balance: 11200, trades: 48 },
-  { date: '2024-02-20', balance: 11050, trades: 54 },
-  { date: '2024-02-25', balance: 11420, trades: 60 },
-  { date: '2024-03-01', balance: 11680, trades: 67 },
-  { date: '2024-03-05', balance: 11520, trades: 73 },
-  { date: '2024-03-10', balance: 11890, trades: 79 },
-  { date: '2024-03-15', balance: 12150, trades: 85 },
-];
+interface EquityDataPoint {
+  date: string;
+  balance: number;
+  trades: number;
+  pnl?: number;
+  initialBalance?: number;
+}
+
+const getUserId = (user: any) => user?.id ?? user?.uid ?? null;
+
+const processTradesToEquityData = (trades: TradeType[], startingBalance: number = 10000): EquityDataPoint[] => {
+  if (!trades || trades.length === 0) return [];
+
+  // Filter and sort trades by close time
+  const closedTrades = trades
+    .filter((trade): trade is TradeType & { closeTime: string | Date } => 
+      trade.status === 'closed' && Boolean(trade.closeTime)
+    )
+    .sort((a, b) => {
+      const aTime = typeof a.closeTime === 'string' ? new Date(a.closeTime).getTime() : a.closeTime.getTime();
+      const bTime = typeof b.closeTime === 'string' ? new Date(b.closeTime).getTime() : b.closeTime.getTime();
+      return aTime - bTime;
+    });
+
+  if (closedTrades.length === 0) return [];
+
+  // Group trades by date and calculate daily P&L
+  const dailyPnL: Record<string, number> = {};
+  closedTrades.forEach(trade => {
+    const closeTime = typeof trade.closeTime === 'string' ? parseISO(trade.closeTime) : trade.closeTime;
+    const date = format(closeTime, 'yyyy-MM-dd');
+    if (!dailyPnL[date]) {
+      dailyPnL[date] = 0;
+    }
+    dailyPnL[date] += trade.pnl || 0;
+  });
+
+  // Convert to array and sort by date
+  const equityData = [];
+  let runningBalance = startingBalance;
+  
+  // Add initial balance point
+  const firstTradeCloseTime = closedTrades[0].closeTime;
+  const firstTradeDate = typeof firstTradeCloseTime === 'string' 
+    ? parseISO(firstTradeCloseTime) 
+    : firstTradeCloseTime;
+  firstTradeDate.setDate(firstTradeDate.getDate() - 1);
+  
+  equityData.push({
+    date: format(firstTradeDate, 'yyyy-MM-dd'),
+    balance: startingBalance,
+    trades: 0,
+    initialBalance: startingBalance
+  });
+
+  // Add points for each trading day
+  Object.entries(dailyPnL).forEach(([date, pnl], index) => {
+    const previousBalance = runningBalance;
+    runningBalance += pnl;
+    equityData.push({
+      date,
+      balance: parseFloat(runningBalance.toFixed(2)),
+      trades: index + 1,
+      pnl,
+      initialBalance: startingBalance
+    });
+  });
+
+  return equityData;
+};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -36,12 +94,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
         <p className="text-sm font-medium">{new Date(label).toLocaleDateString()}</p>
-        <p className="text-sm text-success">
-          Balance: ${data.balance.toLocaleString()}
+        <p className={`text-sm ${data.balance >= payload[0].payload.initialBalance ? 'text-success' : 'text-destructive'}`}>
+          Balance: ${data.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
         <p className="text-sm text-muted-foreground">
-          Total Trades: {data.trades}
+          {data.trades} {data.trades === 1 ? 'Trade' : 'Trades'}
         </p>
+        {data.pnl !== undefined && (
+          <p className={`text-sm ${data.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
+            {data.pnl >= 0 ? '+' : ''}{data.pnl?.toFixed(2)} ({data.pnl !== 0 ? ((data.pnl / (data.balance - data.pnl)) * 100).toFixed(2) : '0.00'}%)
+          </p>
+        )}
       </div>
     );
   }
@@ -49,56 +112,154 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function EquityCurve() {
-  const startingBalance = equityData[0].balance;
-  const currentBalance = equityData[equityData.length - 1].balance;
-  const totalReturn = ((currentBalance - startingBalance) / startingBalance * 100).toFixed(2);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = getUserId(user);
+  const startingBalance = 10000; // Default starting balance
+
+  // Fetch trades data
+  const { data: trades = [], isLoading } = useQuery({
+    queryKey: ['trades', userId],
+    queryFn: async (): Promise<TradeType[]> => {
+      if (!userId) return [];
+      return await getUserTrades(userId);
+    },
+    enabled: !!userId,
+  });
+
+  // Process trades into equity curve data
+  const equityData = useMemo(() => 
+    processTradesToEquityData(trades, startingBalance),
+    [trades, startingBalance]
+  );
+
+  // Calculate metrics
+  const { currentBalance, totalReturn, totalTrades } = useMemo(() => {
+    if (equityData.length === 0) {
+      return {
+        currentBalance: startingBalance,
+        totalReturn: 0,
+        totalTrades: 0
+      };
+    }
+    
+    const current = equityData[equityData.length - 1];
+    return {
+      currentBalance: current.balance,
+      totalReturn: ((current.balance - startingBalance) / startingBalance * 100),
+      totalTrades: current.trades
+    };
+  }, [equityData, startingBalance]);
+
+  // Listen for trade changes
+  useEffect(() => {
+    const handler = () => {
+      queryClient.invalidateQueries({ queryKey: ['trades', userId] });
+    };
+
+    window.addEventListener('trades:updated', handler);
+    return () => window.removeEventListener('trades:updated', handler);
+  }, [queryClient, userId]);
+
+  if (isLoading) {
+    return (
+      <Card className="trading-card">
+        <CardHeader>
+          <CardTitle>Account Equity Curve</CardTitle>
+          <CardDescription>Loading trade data...</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center">
+          <div className="text-muted-foreground">Loading chart...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (equityData.length === 0) {
+    return (
+      <Card className="trading-card">
+        <CardHeader>
+          <CardTitle>Account Equity Curve</CardTitle>
+          <CardDescription>No closed trades found to display equity curve</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center">
+          <div className="text-muted-foreground">Add and close some trades to see your equity curve</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="trading-card">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Account Equity Curve
-          <span className="text-sm font-normal text-success">
-            +{totalReturn}%
+          <span className={`text-sm font-normal ${totalReturn >= 0 ? 'text-success' : 'text-destructive'}`}>
+            {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
           </span>
         </CardTitle>
         <CardDescription>
-          Track your account balance progression over time
+          ${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • {totalTrades} {totalTrades === 1 ? 'Trade' : 'Trades'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={equityData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <LineChart
+              data={equityData}
+              margin={{
+                top: 10,
+                right: 30,
+                left: 0,
+                bottom: 0,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
               <XAxis 
                 dataKey="date" 
-                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                className="text-xs"
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+                minTickGap={20}
               />
               <YAxis 
-                domain={['dataMin - 500', 'dataMax + 500']}
-                tickFormatter={(value) => `$${value.toLocaleString()}`}
-                className="text-xs"
+                tickFormatter={(value) => {
+                  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                  if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+                  return `$${value}`;
+                }}
+                tick={{ fontSize: 12 }}
+                width={80}
+                domain={['auto', 'auto']}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip 
+                content={<CustomTooltip />} 
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  borderColor: 'hsl(var(--border))',
+                  borderRadius: 'var(--radius)',
+                }}
+              />
               <ReferenceLine 
                 y={startingBalance} 
                 stroke="hsl(var(--muted-foreground))" 
-                strokeDasharray="5 5" 
-                label={{ value: "Starting Balance", position: "top" }}
+                strokeDasharray="3 3"
+                strokeOpacity={0.5}
               />
               <Line
                 type="monotone"
                 dataKey="balance"
                 stroke="hsl(var(--primary))"
-                strokeWidth={3}
+                strokeWidth={2}
                 dot={false}
                 activeDot={{ 
                   r: 6, 
-                  fill: "hsl(var(--primary))",
-                  stroke: "hsl(var(--background))",
-                  strokeWidth: 2
+                  stroke: 'hsl(var(--primary))', 
+                  strokeWidth: 2, 
+                  fill: 'hsl(var(--background))',
+                  strokeOpacity: 0.8
                 }}
               />
             </LineChart>
@@ -108,3 +269,4 @@ export function EquityCurve() {
     </Card>
   );
 }
+// ...existing code...
