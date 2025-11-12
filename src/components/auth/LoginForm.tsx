@@ -25,19 +25,38 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   // Handle OAuth redirect on page load
   useEffect(() => {
     const handleOAuthRedirect = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-        return;
-      }
-      
-      if (session) {
-        toast({
-          title: 'Login successful',
-          description: 'Welcome back to your trading dashboard!',
-        });
-        navigate('/dashboard');
+      // Check for OAuth callback in URL
+      const hash = window.location.hash;
+      if (hash.includes('access_token') || hash.includes('error')) {
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) throw error;
+          
+          if (data.session) {
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            toast({
+              title: 'Login successful',
+              description: 'Welcome back to your trading dashboard!',
+            });
+            navigate('/dashboard');
+          }
+        } catch (error) {
+          console.error('Error handling OAuth callback:', error);
+          toast({
+            title: 'Login failed',
+            description: 'There was an error signing in. Please try again.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        // Normal session check for already logged-in users
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/dashboard');
+        }
       }
     };
 
@@ -115,22 +134,20 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'http://localhost:3000/', // Update to production URL when deployed
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
-      if (error) {
-        toast({
-          title: 'Google login failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-      // OAuth redirect handled automatically
+      if (error) throw error;
+      
     } catch (error: any) {
       toast({
         title: 'Google login failed',
-        description: error.message || 'Something went wrong',
+        description: error.message || 'Failed to sign in with Google',
         variant: 'destructive',
       });
     } finally {
