@@ -1,29 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Settings, BookOpen, Plus, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, BookOpen, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { getUserTrades } from '@/lib/tradeService';
-import { Trade } from '@/types/trade';
 
-// Calendar data structure
-type DayData = {
-  trades: number;
-  pnl: number;
-  rMultiple: number;
-  winRate: number;
-  status: 'profit' | 'loss' | 'breakeven';
-  ticks: number;
-};
-
-type CalendarData = {
-  [monthKey: string]: {
-    [dateKey: string]: DayData;
-  };
-};
-
-const allCalendarData: CalendarData = {
+// Enhanced sample data with multiple months
+const allCalendarData = {
   '2024-06': {
     '2024-06-05': { trades: 1, pnl: 1050, rMultiple: 3.5, winRate: 100, status: 'profit', ticks: 150 },
     '2024-06-10': { trades: 1, pnl: 600, rMultiple: 2.0, winRate: 100, status: 'profit', ticks: 120 },
@@ -63,104 +45,19 @@ const displayModes = [
 ];
 
 export default function TradingCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentDate, setCurrentDate] = useState(new Date(2024, 5, 1)); // June 2024
+  const [selectedDate, setSelectedDate] = useState('2024-06-17');
   const [displayMode, setDisplayMode] = useState('pnl');
   const [showDisplayOptions, setShowDisplayOptions] = useState(false);
   const [showAddTrade, setShowAddTrade] = useState(false);
   const [newTrade, setNewTrade] = useState({
     symbol: '',
     direction: 'long',
-    pnl: ''
+    pnl: '',
+    trades: '1'
   });
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [calendarData, setCalendarData] = useState<CalendarData>({});
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  // Fetch trades from backend
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          const userTrades = await getUserTrades(user.id);
-          setTrades(userTrades);
-          
-          // Process trades into calendar data
-          const processedData: CalendarData = {};
-          
-          userTrades.forEach((trade) => {
-            if (trade.status === 'closed' && trade.closeTime) {
-              const date = new Date(trade.closeTime);
-              const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-              const dateKey = date.toISOString().split('T')[0];
-              
-              if (!processedData[monthKey]) {
-                processedData[monthKey] = {};
-              }
-              
-              if (!processedData[monthKey][dateKey]) {
-                processedData[monthKey][dateKey] = {
-                  trades: 0,
-                  pnl: 0,
-                  rMultiple: 0,
-                  winRate: 0,
-                  status: 'breakeven',
-                  ticks: 0
-                };
-              }
-              
-              const dayData = processedData[monthKey][dateKey];
-              dayData.trades += 1;
-              dayData.pnl += trade.pnl;
-              dayData.rMultiple += trade.rMultiple;
-              
-              // Calculate ticks (approximate)
-              dayData.ticks += Math.round(trade.pnl * 0.2);
-              
-              // Update status
-              if (dayData.pnl > 0) dayData.status = 'profit';
-              else if (dayData.pnl < 0) dayData.status = 'loss';
-              else dayData.status = 'breakeven';
-            }
-          });
-          
-          // Calculate win rates for each day
-          Object.keys(processedData).forEach(monthKey => {
-            Object.keys(processedData[monthKey]).forEach(dateKey => {
-              const dayTrades = userTrades.filter(t => {
-                if (!t.closeTime) return false;
-                return new Date(t.closeTime).toISOString().split('T')[0] === dateKey;
-              });
-              
-              const wins = dayTrades.filter(t => t.pnl > 0).length;
-              processedData[monthKey][dateKey].winRate = dayTrades.length > 0 
-                ? Math.round((wins / dayTrades.length) * 100) 
-                : 0;
-                
-              // Average R-multiple
-              if (dayTrades.length > 0) {
-                processedData[monthKey][dateKey].rMultiple = 
-                  dayTrades.reduce((sum, t) => sum + t.rMultiple, 0) / dayTrades.length;
-              }
-            });
-          });
-          
-          setCalendarData(processedData);
-        }
-      } catch (error) {
-        console.error('Error fetching trades:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrades();
-  }, []);
   
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -174,7 +71,7 @@ export default function TradingCalendar() {
   }, []);
 
   const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-  const currentMonthData = calendarData[monthKey] || {};
+  const currentMonthData = allCalendarData[monthKey] || {};
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -213,10 +110,10 @@ export default function TradingCalendar() {
     return `${pnl > 0 ? '' : '-'}$${absValue}`;
   };
 
-  const formatDisplayValue = (data: DayData, mode: string) => {
+  const formatDisplayValue = (data, mode) => {
     switch (mode) {
       case 'rMultiple':
-        return `${data.rMultiple.toFixed(2)}R`;
+        return `${data.rMultiple}R`;
       case 'pnl':
         return formatPnL(data.pnl);
       case 'ticks':
@@ -231,6 +128,14 @@ export default function TradingCalendar() {
   };
 
   // Calculate monthly stats for current month
+  type DayData = {
+    trades: number;
+    pnl: number;
+    rMultiple: number | string;
+    winRate: number;
+    status: string;
+    ticks: number;
+  };
   const monthlyData: DayData[] = Object.values(currentMonthData);
   const totalTrades = monthlyData.reduce((sum, data) => sum + data.trades, 0);
   const totalPnL = monthlyData.reduce((sum, data) => sum + data.pnl, 0);
@@ -250,7 +155,8 @@ export default function TradingCalendar() {
       const day = parseInt(date.split('-')[2]);
       const weekIndex = Math.floor((day + firstDayOfMonth - 1) / 7);
       if (weekIndex < weeks.length) {
-        weeks[weekIndex].pnl += data.pnl;
+        const dayData = data as DayData;
+        weeks[weekIndex].pnl += dayData.pnl;
         weeks[weekIndex].days += 1;
       }
     });
@@ -259,24 +165,33 @@ export default function TradingCalendar() {
   };
 
   const weeklyStats = getWeeklyStats();
-  
+
   const handleAddTrade = () => {
-    // Note: In a real implementation, this should create a trade in the database
-    // For now, we'll just close the modal as the user would add trades through the main Trades page
-    setNewTrade({ symbol: '', direction: 'long', pnl: '' });
-    setShowAddTrade(false);
+    if (newTrade.symbol && newTrade.pnl) {
+      const pnl = parseFloat(newTrade.pnl);
+      const trades = parseInt(newTrade.trades);
+      
+      // Add to current month data (in a real app, this would be saved to a database)
+      const existingData = currentMonthData[selectedDate];
+      if (existingData) {
+        existingData.trades += trades;
+        existingData.pnl += pnl;
+        existingData.status = existingData.pnl > 0 ? 'profit' : existingData.pnl < 0 ? 'loss' : 'breakeven';
+      } else {
+        currentMonthData[selectedDate] = {
+          trades: trades,
+          pnl: pnl,
+          rMultiple: (pnl / 100).toFixed(1), // Simple R calculation
+          winRate: pnl > 0 ? 100 : 0,
+          status: pnl > 0 ? 'profit' : pnl < 0 ? 'loss' : 'breakeven',
+          ticks: Math.round(pnl * 0.2) // Mock ticks calculation
+        };
+      }
+      
+      setNewTrade({ symbol: '', direction: 'long', pnl: '', trades: '1' });
+      setShowAddTrade(false);
+    }
   };
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading calendar...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background mobile-container">
@@ -468,6 +383,14 @@ export default function TradingCalendar() {
                       <div className="text-xs text-muted-foreground">P&L</div>
                     </div>
                   </div>
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => setShowAddTrade(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Trade
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center py-4">
