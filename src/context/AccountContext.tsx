@@ -45,19 +45,27 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [user]);
 
+  // Track if accounts have been loaded for current user to prevent refetches
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       setAccounts([]);
       setSelectedAccountId(null);
+      setLoadedUserId(null);
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
       }
       setIsLoading(false);
       return;
     }
-    void loadAccounts();
-  }, [authLoading, user, loadAccounts]);
+    // Only load accounts if user has changed
+    if (user.id !== loadedUserId) {
+      setLoadedUserId(user.id);
+      void loadAccounts();
+    }
+  }, [authLoading, user, loadAccounts, loadedUserId]);
 
   useEffect(() => {
     if (!accounts.length) return;

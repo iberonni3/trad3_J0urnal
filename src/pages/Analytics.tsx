@@ -86,60 +86,87 @@ export default function Analytics() {
     console.log('Time range:', timeRange);
   }, [filteredTrades, timeRange]);
 
-  // Calculate overview data by month and year
+  // Calculate daily equity curve data
   const calculatePnLCurveData = (startingBalance: number) => {
+    // Get all closed trades with their close dates
     const closedTrades = filteredTrades
       .filter((trade) => trade.status === 'closed')
-      .map((trade) => {
-        const rawDate = trade.closeTime ?? trade.openTime;
-        const date = rawDate ? new Date(rawDate) : null;
-        return {
-          date,
-          pnl: trade.pnl ?? 0,
-        };
-      })
+      .map((trade) => ({
+        date: trade.closeTime ? new Date(trade.closeTime) : null,
+        pnl: trade.pnl ?? 0,
+      }))
       .filter((item) => item.date && !Number.isNaN(item.date.getTime()));
 
-    const dailyMap = new Map<string, number>();
+    // Group trades by day
+    const dailyPnL = new Map<string, number>();
+    const dailyEquity = new Map<string, number>();
 
+    // Initialize with starting balance
+    const startDate = new Date();
+    startDate.setDate(1); // Start from the first day of the current month
+    const today = new Date();
+
+    // Initialize all days of the current month with starting balance
+    for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toISOString().split('T')[0];
+      dailyPnL.set(dateKey, 0);
+      dailyEquity.set(dateKey, startingBalance);
+    }
+
+    // Process trades and update daily P&L
     closedTrades.forEach(({ date, pnl }) => {
       if (!date) return;
-      const key = date.toISOString().split('T')[0];
-      dailyMap.set(key, (dailyMap.get(key) ?? 0) + pnl);
+      const dateKey = date.toISOString().split('T')[0];
+      dailyPnL.set(dateKey, (dailyPnL.get(dateKey) || 0) + pnl);
     });
 
-    const sortedKeys = Array.from(dailyMap.keys()).sort();
-    let cumulative = 0;
+    // Calculate running equity
+    let runningEquity = startingBalance;
+    const result = [];
 
-    return sortedKeys.map((isoDate) => {
-      const dailyPnL = dailyMap.get(isoDate) ?? 0;
-      cumulative += dailyPnL;
+    // Sort dates chronologically
+    const sortedDates = Array.from(dailyPnL.keys()).sort();
 
-      const displayDate = new Date(isoDate);
+    for (const dateKey of sortedDates) {
+      runningEquity += dailyPnL.get(dateKey) || 0;
+      const date = new Date(dateKey);
 
-      return {
-        date: isoDate,
-        label: displayDate.toLocaleDateString('en-US', {
+      result.push({
+        date: dateKey,
+        dayOfMonth: date.getDate(),
+        label: date.toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
         }),
-        dailyPnL,
-        cumulativePnL: cumulative,
-        equity: cumulative + startingBalance,
-      };
-    });
+        dailyPnL: dailyPnL.get(dateKey) || 0,
+        equity: runningEquity,
+      });
+    }
+
+    // If no trades, return a single point with starting balance
+    if (result.length === 0) {
+      result.push({
+        date: new Date().toISOString().split('T')[0],
+        dayOfMonth: new Date().getDate(),
+        label: 'Today',
+        dailyPnL: 0,
+        equity: startingBalance,
+      });
+    }
+
+    return result;
   };
 
   // Calculate symbol performance
   const calculateSymbolData = () => {
     const symbolStats: { [key: string]: { trades: number; profit: number; wins: number; total: number } } = {};
-    
-    filteredTrades.forEach(trade => {
+
+    filteredTrades.forEach((trade) => {
       if (trade.status === 'closed') {
         if (!symbolStats[trade.symbol]) {
           symbolStats[trade.symbol] = { trades: 0, profit: 0, wins: 0, total: 0 };
         }
-        
+
         symbolStats[trade.symbol].trades += 1;
         symbolStats[trade.symbol].profit += trade.pnl;
         symbolStats[trade.symbol].total += 1;
@@ -154,7 +181,7 @@ export default function Analytics() {
         symbol,
         trades: data.trades,
         profit: Math.round(data.profit),
-        winRate: data.total > 0 ? Math.round((data.wins / data.total) * 100) : 0
+        winRate: data.total > 0 ? Math.round((data.wins / data.total) * 100) : 0,
       }))
       .sort((a, b) => b.profit - a.profit)
       .slice(0, 5);
@@ -163,8 +190,8 @@ export default function Analytics() {
   // Calculate setup distribution
   const calculateSetupData = () => {
     const setupCounts: { [key: string]: number } = {};
-    
-    filteredTrades.forEach(trade => {
+
+    filteredTrades.forEach((trade) => {
       const setup = trade.setup || 'Unspecified';
       setupCounts[setup] = (setupCounts[setup] || 0) + 1;
     });
@@ -174,56 +201,55 @@ export default function Analytics() {
       'hsl(var(--success))',
       'hsl(var(--chart-neutral))',
       'hsl(var(--danger))',
-      'hsl(var(--warning))'
+      'hsl(var(--warning))',
     ];
 
     return Object.entries(setupCounts)
       .map(([name, value], index) => ({
         name,
         value,
-        color: colors[index % colors.length]
+        color: colors[index % colors.length],
       }))
       .sort((a, b) => b.value - a.value);
   };
 
   // Calculate KPIs
   const calculateKPIs = () => {
-    const closedTrades = filteredTrades.filter(t => t.status === 'closed');
+    const closedTrades = filteredTrades.filter((t) => t.status === 'closed');
     const totalPnL = closedTrades.reduce((sum, t) => sum + t.pnl, 0);
-    const wins = closedTrades.filter(t => t.pnl > 0).length;
+    const wins = closedTrades.filter((t) => t.pnl > 0).length;
     const winRate = closedTrades.length > 0 ? (wins / closedTrades.length) * 100 : 0;
-    const avgR = closedTrades.length > 0 
-      ? closedTrades.reduce((sum, t) => sum + t.rMultiple, 0) / closedTrades.length 
+    const avgR = closedTrades.length > 0
+      ? closedTrades.reduce((sum, t) => sum + t.rMultiple, 0) / closedTrades.length
       : 0;
-    
+
     // Calculate current month trades
     const now = new Date();
-    const currentMonthTrades = trades.filter(t => {
+    const currentMonthTrades = trades.filter((t) => {
       const tradeDate = t.openTime;
-      return tradeDate.getMonth() === now.getMonth() && 
-             tradeDate.getFullYear() === now.getFullYear();
+      return tradeDate.getMonth() === now.getMonth() && tradeDate.getFullYear() === now.getFullYear();
     });
 
     return {
       totalPnL: Math.round(totalPnL),
       winRate: Math.round(winRate * 10) / 10,
       avgR: Math.round(avgR * 100) / 100,
-      currentMonthTrades: currentMonthTrades.length
+      currentMonthTrades: currentMonthTrades.length,
     };
   };
 
   // Calculate trade distribution
   const calculateTradeDistribution = () => {
-    const closedTrades = filteredTrades.filter(t => t.status === 'closed');
-    const winners = closedTrades.filter(t => t.pnl > 0).length;
-    const losers = closedTrades.filter(t => t.pnl < 0).length;
-    const breakeven = closedTrades.filter(t => t.pnl === 0).length;
+    const closedTrades = filteredTrades.filter((t) => t.status === 'closed');
+    const winners = closedTrades.filter((t) => t.pnl > 0).length;
+    const losers = closedTrades.filter((t) => t.pnl < 0).length;
+    const breakeven = closedTrades.filter((t) => t.pnl === 0).length;
 
     return [
       { name: 'Winners', value: winners, color: 'hsl(var(--success))' },
       { name: 'Losers', value: losers, color: 'hsl(var(--danger))' },
-      { name: 'Breakeven', value: breakeven, color: 'hsl(var(--muted-foreground))' }
-    ].filter(item => item.value > 0);
+      { name: 'Breakeven', value: breakeven, color: 'hsl(var(--muted-foreground))' },
+    ].filter((item) => item.value > 0);
   };
 
   const formatCurrency = (value: number) => {
@@ -261,24 +287,17 @@ export default function Analytics() {
     const dataPoint = payload[0]?.payload;
     if (!dataPoint) return null;
 
-    const labelDate = new Date(label);
-    const formattedLabel = labelDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-
     return (
       <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-        <p className="font-medium mb-2">{formattedLabel}</p>
+        <p className="font-medium mb-2">Day {dataPoint.dayOfMonth}</p>
+        <p className="text-sm text-muted-foreground">
+          Date: {dataPoint.label}
+        </p>
         <p className="text-sm text-muted-foreground">
           Daily P&L: {formatCurrency(dataPoint.dailyPnL)}
         </p>
-        <p className="text-sm text-muted-foreground">
-          Cumulative: {formatCurrency(dataPoint.cumulativePnL)}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Equity: {formatCurrency(dataPoint.equity)}
+        <p className="text-sm font-medium">
+          Account Equity: {formatCurrency(dataPoint.equity)}
         </p>
       </div>
     );
@@ -324,7 +343,7 @@ export default function Analytics() {
                   : 'Deep insights into your trading performance and patterns'}
               </p>
             </div>
-            
+
             <div className="responsive-flex gap-3">
               <Select value={timeRange} onValueChange={setTimeRange}>
                 <SelectTrigger className="w-full sm:w-32">
@@ -364,7 +383,7 @@ export default function Analytics() {
                       <p className={`text-2xl font-bold ${kpis.totalPnL >= 0 ? 'text-success' : 'text-danger'}`}>
                         {formatCurrency(kpis.totalPnL)}
                       </p>
-                      <p className="text-xs text-muted-foreground">{filteredTrades.filter(t => t.status === 'closed').length} closed trades</p>
+                      <p className="text-xs text-muted-foreground">{filteredTrades.filter((t) => t.status === 'closed').length} closed trades</p>
                     </div>
                     <div className={`h-12 w-12 rounded-lg ${kpis.totalPnL >= 0 ? 'bg-success/10' : 'bg-danger/10'} flex items-center justify-center`}>
                       {kpis.totalPnL >= 0 ? (
@@ -427,9 +446,15 @@ export default function Analytics() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
               <div className="responsive-tabs-container">
                 <TabsList className="responsive-tabs-list">
-                  <TabsTrigger value="overview" className="responsive-tab">Overview</TabsTrigger>
-                  <TabsTrigger value="symbols" className="responsive-tab">Symbols</TabsTrigger>
-                  <TabsTrigger value="setups" className="responsive-tab">Setups</TabsTrigger>
+                  <TabsTrigger value="overview" className="responsive-tab">
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger value="symbols" className="responsive-tab">
+                    Symbols
+                  </TabsTrigger>
+                  <TabsTrigger value="setups" className="responsive-tab">
+                    Setups
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -437,8 +462,8 @@ export default function Analytics() {
                 <div className="grid gap-6 lg:grid-cols-2">
                   <Card className="trading-card">
                     <CardHeader>
-                      <CardTitle>P&amp;L Curve</CardTitle>
-                      <CardDescription>Daily net profit and loss with cumulative total</CardDescription>
+                      <CardTitle>Equity Curve</CardTitle>
+                      <CardDescription>Account equity balance by day of month</CardDescription>
                     </CardHeader>
                     <CardContent>
                       {pnlCurveData.length > 0 ? (
@@ -459,27 +484,25 @@ export default function Analytics() {
                               />
                               <YAxis
                                 tickFormatter={(value) => formatCurrency(value).replace('+', '')}
+                                domain={['auto', 'auto']}
+                                width={100}
                               />
                               <Tooltip content={<PnLCurveTooltip />} />
                               <Area
                                 type="monotone"
                                 dataKey="equity"
+                                name="Account Equity"
                                 stroke="hsl(var(--primary))"
-                                fillOpacity={1}
-                                fill="url(#pnlCurveGradient)"
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="cumulativePnL"
-                                stroke="hsl(var(--success))"
                                 strokeWidth={2}
-                                dot={false}
+                                fillOpacity={0.1}
+                                fill="url(#pnlCurveGradient)"
                               />
                             </AreaChart>
                           </ResponsiveContainer>
                         </div>
                       ) : (
                         <div className="h-80 flex items-center justify-center text-muted-foreground">
+                          No closed trades with P&L available for this range
                           No closed trades with P&amp;L available for this range
                         </div>
                       )}

@@ -11,26 +11,39 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) applyUserPreferences(currentUser.user_metadata);
-        setLoading(false);
-      }
-    );
+    let mounted = true;
+    let initialLoadComplete = false;
 
-    // Check for existing session
+    // Check for existing session first
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) applyUserPreferences(currentUser.user_metadata);
       setLoading(false);
+      initialLoadComplete = true;
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) applyUserPreferences(currentUser.user_metadata);
+        // Only set loading to false if initial load hasn't completed yet
+        if (!initialLoadComplete) {
+          setLoading(false);
+          initialLoadComplete = true;
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []); // Empty dependency array - only run once on mount
 
   const refreshUser = useCallback(async () => {
     const { data, error } = await supabase.auth.getUser();
