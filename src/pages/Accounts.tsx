@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { formatCurrency } from '@/lib/calculations';
 import { PlusCircle, CheckCircle2 } from 'lucide-react';
 
 export default function Accounts() {
+  const navigate = useNavigate();
   const { accounts, selectedAccount, selectAccount, createAccount, isLoading, error } = useAccount();
   const [formState, setFormState] = useState({
     name: '',
@@ -48,6 +50,8 @@ export default function Accounts() {
         initialBalance: parsedBalance,
       });
       resetForm();
+      // Redirect to dashboard after creating the first account
+      navigate('/dashboard');
     } catch (err) {
       console.error('Error creating account:', err);
       setFormError(err instanceof Error ? err.message : 'Failed to create account.');
@@ -140,9 +144,8 @@ export default function Accounts() {
                   return (
                     <div
                       key={account.id}
-                      className={`border rounded-lg p-4 flex flex-col gap-2 ${
-                        isActive ? 'border-primary bg-primary/5' : 'border-border'
-                      }`}
+                      className={`border rounded-lg p-4 flex flex-col gap-2 ${isActive ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>

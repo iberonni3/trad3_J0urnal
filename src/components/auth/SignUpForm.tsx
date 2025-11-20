@@ -117,7 +117,7 @@ export function SignUpForm({ onToggleForm }: SignUpFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-4 sm:mx-0 bg-white/90 backdrop-blur-sm shadow-xl border border-white/20">
+    <Card className="w-full max-w-md sm:mx-0 bg-white/90 backdrop-blur-sm shadow-xl border border-white/20">
       <CardHeader className="space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <div className="p-2 rounded-lg hero-gradient">

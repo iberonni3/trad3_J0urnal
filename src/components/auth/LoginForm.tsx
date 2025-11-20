@@ -30,13 +30,13 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
       if (hash.includes('access_token') || hash.includes('error')) {
         try {
           const { data, error } = await supabase.auth.getSession();
-          
+
           if (error) throw error;
-          
+
           if (data.session) {
             // Clean up the URL
             window.history.replaceState({}, document.title, window.location.pathname);
-            
+
             toast({
               title: 'Login successful',
               description: 'Welcome back to your trading dashboard!',
@@ -143,7 +143,7 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
       });
 
       if (error) throw error;
-      
+
     } catch (error: any) {
       toast({
         title: 'Google login failed',
@@ -156,7 +156,7 @@ export function LoginForm({ onToggleForm }: LoginFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-4 sm:mx-0 bg-white/90 backdrop-blur-sm shadow-xl border border-white/20">
+    <Card className="w-full max-w-md sm:mx-0 bg-white/90 backdrop-blur-sm shadow-xl border border-white/20">
       <CardHeader className="space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <div className="p-2 rounded-lg hero-gradient">

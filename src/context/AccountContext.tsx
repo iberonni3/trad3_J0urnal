@@ -23,7 +23,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(STORAGE_KEY);
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const loadAccounts = useCallback(async () => {
