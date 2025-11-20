@@ -9,52 +9,52 @@ const LOT_VALUE = 100;
 export const calculateTradeMetrics = (trades: Trade[]): TradeMetrics => {
   const closedTrades = trades.filter(t => t.status === 'closed');
   const openTrades = trades.filter(t => t.status === 'open');
-  
+
   const winningTrades = closedTrades.filter(t => t.pnl > 0);
   const losingTrades = closedTrades.filter(t => t.pnl < 0);
-  
+
   const totalPnL = closedTrades.reduce((sum, t) => sum + t.pnl, 0);
   const grossProfit = winningTrades.reduce((sum, t) => sum + t.pnl, 0);
   const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0));
-  
-  const winRate = closedTrades.length > 0 
-    ? (winningTrades.length / closedTrades.length) * 100 
+
+  const winRate = closedTrades.length > 0
+    ? (winningTrades.length / closedTrades.length) * 100
     : 0;
-  
+
   const averageWin = winningTrades.length > 0
     ? grossProfit / winningTrades.length
     : 0;
-  
+
   const averageLoss = losingTrades.length > 0
     ? grossLoss / losingTrades.length
     : 0;
-  
+
   const averageRMultiple = closedTrades.length > 0
     ? closedTrades.reduce((sum, t) => sum + t.rMultiple, 0) / closedTrades.length
     : 0;
-  
+
   // Expectancy = (Win Rate × Average Win) - (Loss Rate × Average Loss)
   const lossRate = closedTrades.length > 0
     ? (losingTrades.length / closedTrades.length)
     : 0;
   const expectancy = (winRate / 100 * averageWin) - (lossRate * averageLoss);
-  
+
   // Profit Factor = Gross Profit / Gross Loss
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
-  
+
   // Max Drawdown calculation
   const { maxDrawdown, currentDrawdown } = calculateDrawdown(closedTrades);
-  
+
   const largestWin = winningTrades.length > 0
     ? Math.max(...winningTrades.map(t => t.pnl))
     : 0;
-  
+
   const largestLoss = losingTrades.length > 0
     ? Math.min(...losingTrades.map(t => t.pnl))
     : 0;
-  
+
   const averageHoldTime = calculateAverageHoldTime(closedTrades);
-  
+
   return {
     totalTrades: trades.length,
     openTrades: openTrades.length,
@@ -84,7 +84,7 @@ export const calculateTradeMetrics = (trades: Trade[]): TradeMetrics => {
 export const calculateWinRate = (trades: Trade[]): number => {
   const closedTrades = trades.filter(t => t.status === 'closed');
   if (closedTrades.length === 0) return 0;
-  
+
   const wins = closedTrades.filter(t => t.pnl > 0).length;
   return (wins / closedTrades.length) * 100;
 };
@@ -104,7 +104,7 @@ export const calculateTotalPnL = (trades: Trade[]): number => {
 export const calculateAverageRMultiple = (trades: Trade[]): number => {
   const closedTrades = trades.filter(t => t.status === 'closed');
   if (closedTrades.length === 0) return 0;
-  
+
   const totalR = closedTrades.reduce((sum, t) => sum + t.rMultiple, 0);
   return totalR / closedTrades.length;
 };
@@ -115,23 +115,23 @@ export const calculateAverageRMultiple = (trades: Trade[]): number => {
  * Where Lot Size is the trade quantity and each lot is worth $100
  */
 export const calculateRMultiple = (trade: Trade): number => {
-  console.log('DEBUG R-multiple:', { 
-    status: trade.status, 
-    quantity: trade.quantity, 
+  console.log('DEBUG R-multiple:', {
+    status: trade.status,
+    quantity: trade.quantity,
     pnl: trade.pnl,
     statusCheck: trade.status !== 'closed',
     quantityCheck: !trade.quantity
   });
-  
+
   if (trade.status !== 'closed' || !trade.quantity) return 0;
-  
+
   try {
     // Calculate total risk in USD (using quantity as lots)
     // quantity represents number of lots, each lot = $100
     const totalLotValue = trade.quantity * 100; // Each lot is worth $100
-    
+
     if (totalLotValue <= 0 || !isFinite(totalLotValue)) return 0;
-    
+
     // R-multiple = P&L / (Lot Size * 100)
     const rMultiple = trade.pnl / totalLotValue;
     return isFinite(rMultiple) ? parseFloat(rMultiple.toFixed(2)) : 0;
@@ -148,16 +148,16 @@ export const calculateRMultiple = (trade: Trade): number => {
  */
 export const calculatePnL = (trade: Trade): number => {
   if (trade.exit === null) return 0;
-  
+
   try {
     const priceChange = trade.direction === 'long'
       ? (trade.exit - trade.entry)
       : (trade.entry - trade.exit);
-    
+
     const commission = trade.commission || 0;
     // Calculate P&L using LOT_VALUE ($100 per lot)
     const pnl = (priceChange * trade.quantity * LOT_VALUE) - commission;
-    
+
     return isFinite(pnl) ? pnl : 0;
   } catch (error) {
     console.error('Error calculating P&L:', error);
@@ -172,34 +172,34 @@ export const calculateDrawdown = (trades: Trade[]): { maxDrawdown: number; curre
   if (trades.length === 0) {
     return { maxDrawdown: 0, currentDrawdown: 0 };
   }
-  
+
   // Sort trades by close time
   const sortedTrades = [...trades].sort((a, b) => {
     const timeA = new Date(a.closeTime || a.openTime).getTime();
     const timeB = new Date(b.closeTime || b.openTime).getTime();
     return timeA - timeB;
   });
-  
+
   let equity = 0;
   let peak = 0;
   let maxDrawdown = 0;
-  
+
   for (const trade of sortedTrades) {
     equity += trade.pnl;
-    
+
     if (equity > peak) {
       peak = equity;
     }
-    
+
     const drawdown = peak > 0 ? ((peak - equity) / peak) * 100 : 0;
-    
+
     if (drawdown > maxDrawdown) {
       maxDrawdown = drawdown;
     }
   }
-  
+
   const currentDrawdown = peak > 0 ? ((peak - equity) / peak) * 100 : 0;
-  
+
   return { maxDrawdown, currentDrawdown };
 };
 
@@ -209,14 +209,14 @@ export const calculateDrawdown = (trades: Trade[]): { maxDrawdown: number; curre
 export const calculateAverageHoldTime = (trades: Trade[]): number => {
   const closedTrades = trades.filter(t => t.status === 'closed' && t.closeTime);
   if (closedTrades.length === 0) return 0;
-  
+
   const totalHours = closedTrades.reduce((sum, trade) => {
     const openTime = new Date(trade.openTime).getTime();
     const closeTime = new Date(trade.closeTime!).getTime();
-    const hours = (closeTime - openTime) / (1000 * 60 * 60);
+    const hours = Math.abs(closeTime - openTime) / (1000 * 60 * 60);
     return sum + hours;
   }, 0);
-  
+
   return totalHours / closedTrades.length;
 };
 
@@ -227,21 +227,21 @@ export const calculateAverageHoldTime = (trades: Trade[]): number => {
 export const calculateExpectancy = (trades: Trade[]): number => {
   const closedTrades = trades.filter(t => t.status === 'closed');
   if (closedTrades.length === 0) return 0;
-  
+
   const winningTrades = closedTrades.filter(t => t.pnl > 0);
   const losingTrades = closedTrades.filter(t => t.pnl < 0);
-  
+
   const winRate = winningTrades.length / closedTrades.length;
   const lossRate = losingTrades.length / closedTrades.length;
-  
+
   const averageWin = winningTrades.length > 0
     ? winningTrades.reduce((sum, t) => sum + t.pnl, 0) / winningTrades.length
     : 0;
-  
+
   const averageLoss = losingTrades.length > 0
     ? Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0) / losingTrades.length)
     : 0;
-  
+
   return (winRate * averageWin) - (lossRate * averageLoss);
 };
 
@@ -251,21 +251,21 @@ export const calculateExpectancy = (trades: Trade[]): number => {
  */
 export const calculateProfitFactor = (trades: Trade[]): number => {
   const closedTrades = trades.filter(t => t.status === 'closed');
-  
+
   const grossProfit = closedTrades
     .filter(t => t.pnl > 0)
     .reduce((sum, t) => sum + t.pnl, 0);
-  
+
   const grossLoss = Math.abs(
     closedTrades
       .filter(t => t.pnl < 0)
       .reduce((sum, t) => sum + t.pnl, 0)
   );
-  
+
   if (grossLoss === 0) {
     return grossProfit > 0 ? Infinity : 0;
   }
-  
+
   return grossProfit / grossLoss;
 };
 
@@ -280,10 +280,10 @@ export const generateEquityCurve = (trades: Trade[]): { date: string; equity: nu
       const timeB = new Date(b.closeTime!).getTime();
       return timeA - timeB;
     });
-  
+
   let equity = 0;
   const equityCurve: { date: string; equity: number }[] = [];
-  
+
   for (const trade of closedTrades) {
     equity += trade.pnl;
     equityCurve.push({
@@ -291,7 +291,7 @@ export const generateEquityCurve = (trades: Trade[]): { date: string; equity: nu
       equity,
     });
   }
-  
+
   return equityCurve;
 };
 
@@ -321,7 +321,7 @@ export const formatPercentage = (value: number, decimals = 1): string => {
  * @returns Array of equity data points for the equity curve chart
  */
 export const calculateEquityCurve = (
-  trades: Trade[], 
+  trades: Trade[],
   startingBalance: number = 10000
 ): Array<{ date: string; balance: number; trades: number }> => {
   // Filter only closed trades with P&L
@@ -349,18 +349,18 @@ export const calculateEquityCurve = (
 
   // Initialize with starting balance
   const equityData: Array<{ date: string; balance: number; trades: number }> = [];
-  
+
   let currentBalance = startingBalance;
   let tradeCount = 0;
 
   // Add starting point (before first trade)
-  const firstTradeDate = sortedTrades[0].closeTime 
-    ? new Date(sortedTrades[0].closeTime) 
+  const firstTradeDate = sortedTrades[0].closeTime
+    ? new Date(sortedTrades[0].closeTime)
     : new Date(sortedTrades[0].openTime);
-  
+
   const startDate = new Date(firstTradeDate);
   startDate.setDate(startDate.getDate() - 1); // One day before first trade
-  
+
   equityData.push({
     date: startDate.toISOString().split('T')[0],
     balance: startingBalance,
@@ -371,13 +371,13 @@ export const calculateEquityCurve = (
   sortedTrades.forEach(trade => {
     tradeCount++;
     currentBalance += trade.pnl || 0;
-    
-    const date = trade.closeTime 
-      ? new Date(trade.closeTime) 
+
+    const date = trade.closeTime
+      ? new Date(trade.closeTime)
       : new Date(trade.openTime);
-    
+
     const dateStr = date.toISOString().split('T')[0];
-    
+
     equityData.push({
       date: dateStr,
       balance: Math.round(currentBalance * 100) / 100, // Round to 2 decimals
