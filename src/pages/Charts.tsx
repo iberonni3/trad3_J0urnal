@@ -32,8 +32,6 @@ export default function Charts(): JSX.Element | null {
     }
   }, [trade, navigate]);
 
-  if (!trade) return null;
-
   // Build TradingView symbol. Heuristic: 6-letter uppercase => FX:
   const makeTvSymbol = (s: string) => {
     if (!s) return s;
@@ -41,7 +39,7 @@ export default function Charts(): JSX.Element | null {
     if (/^[A-Z]{6}$/.test(norm)) return `FX:${norm}`;
     return norm;
   };
-  const tvSymbol = makeTvSymbol(trade.symbol);
+  const tvSymbol = trade ? makeTvSymbol(trade.symbol) : "";
 
   /**
    * Attempt to find underlying chart instance and functions.
@@ -58,7 +56,7 @@ export default function Charts(): JSX.Element | null {
     if ((w as any).tvWidget && typeof (w as any).tvWidget.activeChart === "function") {
       try {
         return (w as any).tvWidget.activeChart();
-      } catch {}
+      } catch { }
     }
     return w;
   }, []);
@@ -74,7 +72,7 @@ export default function Charts(): JSX.Element | null {
         const ac = chartInst.activeChart();
         if (ac && typeof ac.timeToCoordinate === "function") return ac.timeToCoordinate(timeSec);
       }
-    } catch {}
+    } catch { }
     return null;
   };
   const priceToY = (chartInst: any, price: number): number | null => {
@@ -85,7 +83,7 @@ export default function Charts(): JSX.Element | null {
         const ac = chartInst.activeChart();
         if (ac && typeof ac.priceToCoordinate === "function") return ac.priceToCoordinate(price);
       }
-    } catch {}
+    } catch { }
     return null;
   };
 
@@ -94,6 +92,7 @@ export default function Charts(): JSX.Element | null {
    */
   const renderOverlayMarkers = useCallback(
     (chartInst: any) => {
+      if (!trade) return;
       const container = overlayRef.current;
       if (!container) return;
       container.innerHTML = ""; // cleanup previous markers
@@ -165,6 +164,7 @@ export default function Charts(): JSX.Element | null {
    */
   const tryNativeShapes = useCallback(
     (chartInst: any) => {
+      if (!trade) return false;
       if (!chartInst) return false;
       try {
         // attempt a few known method names
@@ -202,6 +202,7 @@ export default function Charts(): JSX.Element | null {
    * Called once widget ref is available. Polls a bit to get the internal chart instance and renders overlays.
    */
   useEffect(() => {
+    if (!trade) return;
     let mounted = true;
     let resizeHandler: (() => void) | null = null;
 
@@ -239,7 +240,9 @@ export default function Charts(): JSX.Element | null {
       if (overlayRef.current) overlayRef.current.innerHTML = "";
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getChartInstance, renderOverlayMarkers, tryNativeShapes]);
+  }, [getChartInstance, renderOverlayMarkers, tryNativeShapes, trade]);
+
+  if (!trade) return null;
 
   return (
     <div className="charts-page">

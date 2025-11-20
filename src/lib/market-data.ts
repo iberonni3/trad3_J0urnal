@@ -28,7 +28,7 @@ export class FinnhubProvider implements MarketDataProvider {
   private subscriptions = new Map<string, (data: CandleData) => void>();
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.REACT_APP_FINNHUB_API_KEY || null;
+    this.apiKey = apiKey || import.meta.env.VITE_FINNHUB_API_KEY || null;
   }
 
   async connect(): Promise<boolean> {
@@ -41,7 +41,7 @@ export class FinnhubProvider implements MarketDataProvider {
       // Test the API connection
       const response = await fetch(`${this.baseUrl}/quote?symbol=AAPL&token=${this.apiKey}`);
       const data = await response.json();
-      
+
       if (data.error) {
         console.error('Finnhub API error:', data.error);
         return false;
@@ -49,7 +49,7 @@ export class FinnhubProvider implements MarketDataProvider {
 
       // Initialize WebSocket connection for real-time data
       this.websocket = new WebSocket(`wss://ws.finnhub.io?token=${this.apiKey}`);
-      
+
       this.websocket.onopen = () => {
         console.log('Finnhub WebSocket connected');
       };
@@ -124,7 +124,7 @@ export class FinnhubProvider implements MarketDataProvider {
     try {
       // Convert timeframe to Finnhub resolution
       const resolution = this.convertTimeframeToResolution(timeframe);
-      
+
       // Calculate time range
       const to = Math.floor(Date.now() / 1000);
       const from = to - (limit * this.getTimeframeInSeconds(timeframe));
@@ -225,7 +225,7 @@ export class DemoDataProvider implements MarketDataProvider {
 
   subscribe(symbol: string, timeframe: string, callback: (data: CandleData) => void): void {
     const key = `${symbol}-${timeframe}`;
-    
+
     // Clear existing subscription
     if (this.subscriptions.has(key)) {
       clearInterval(this.subscriptions.get(key)!.interval);
@@ -236,7 +236,7 @@ export class DemoDataProvider implements MarketDataProvider {
       const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
       const basePrice = this.getBasePrice(symbol);
       const change = (Math.random() - 0.5) * 0.002 * basePrice;
-      
+
       const candleData: CandleData = {
         time: now,
         open: basePrice,
@@ -280,12 +280,12 @@ export class DemoDataProvider implements MarketDataProvider {
 // Generate realistic demo market data
 function generateDemoMarketData(symbol: string, timeframe: string, limit: number): CandleData[] {
   const data: CandleData[] = [];
-  
+
   // Base price varies by symbol
   let basePrice = 0;
   let tickSize = 0.00001;
-  
-  switch(symbol) {
+
+  switch (symbol) {
     case 'EURUSD': basePrice = 1.08472; break;
     case 'GBPUSD': basePrice = 1.25632; break;
     case 'USDJPY': basePrice = 150.85; tickSize = 0.01; break;
@@ -293,10 +293,10 @@ function generateDemoMarketData(symbol: string, timeframe: string, limit: number
     case 'AAPL': basePrice = 175.25; tickSize = 0.01; break;
     default: basePrice = 100.00; tickSize = 0.01;
   }
-  
+
   // Time interval in milliseconds based on timeframe
   let interval = 60 * 1000; // Default 1m
-  switch(timeframe) {
+  switch (timeframe) {
     case '1': interval = 60 * 1000; break;
     case '5': interval = 5 * 60 * 1000; break;
     case '15': interval = 15 * 60 * 1000; break;
@@ -306,14 +306,14 @@ function generateDemoMarketData(symbol: string, timeframe: string, limit: number
     case 'D': interval = 24 * 60 * 60 * 1000; break;
     case 'W': interval = 7 * 24 * 60 * 60 * 1000; break;
   }
-  
+
   // End time is now, start time is calculated based on limit and interval
   const endTime = new Date();
   const startTime = new Date(endTime.getTime() - limit * interval);
-  
+
   // Initialize price with slight random offset from base price
   let currentPrice = basePrice * (0.995 + Math.random() * 0.01);
-  
+
   // Market session patterns for realistic behavior
   const getSessionMultiplier = (hour: number) => {
     // Simulate different market sessions with varying volatility
@@ -323,7 +323,7 @@ function generateDemoMarketData(symbol: string, timeframe: string, limit: number
     if (hour >= 17 && hour < 22) return 1.0; // US afternoon
     return 0.5; // Overnight
   };
-  
+
   // Key price levels for this symbol (support/resistance)
   const keyLevels = [
     basePrice * 0.985,
@@ -333,72 +333,72 @@ function generateDemoMarketData(symbol: string, timeframe: string, limit: number
     basePrice * 1.008,
     basePrice * 1.015
   ];
-  
+
   // Function to check if price is near key level
   const isNearKeyLevel = (price: number, threshold: number = 0.001) => {
     return keyLevels.some(level => Math.abs(price - level) / level < threshold);
   };
-  
+
   let trendDirection = Math.random() > 0.5 ? 1 : -1;
   let trendStrength = 0.3 + Math.random() * 0.4;
   let consolidationCounter = 0;
-  
+
   for (let i = 0; i < limit; i++) {
     const time = new Date(startTime.getTime() + i * interval);
     const hour = time.getUTCHours();
     const sessionMultiplier = getSessionMultiplier(hour);
-    
+
     // Change trend randomly to simulate market cycles
     if (Math.random() < 0.008) { // 0.8% chance per candle
       trendDirection *= -1;
       trendStrength = 0.2 + Math.random() * 0.6;
       consolidationCounter = 0;
     }
-    
+
     // Key level reactions - price tends to bounce or consolidate near important levels
     let keyLevelReaction = 0;
     if (isNearKeyLevel(currentPrice)) {
       // 60% chance of bouncing off key levels
       if (Math.random() < 0.6) {
-        const nearestLevel = keyLevels.reduce((prev, curr) => 
+        const nearestLevel = keyLevels.reduce((prev, curr) =>
           Math.abs(curr - currentPrice) < Math.abs(prev - currentPrice) ? curr : prev
         );
         keyLevelReaction = (nearestLevel - currentPrice) * 0.3;
       }
     }
-    
+
     // Consolidation periods
     if (consolidationCounter > 20 && Math.random() < 0.15) {
       trendStrength *= 0.3; // Reduce trend strength for consolidation
     }
     consolidationCounter++;
-    
+
     const open = currentPrice;
-    
+
     // Base volatility adjusted for symbol and timeframe
     const baseVolatility = tickSize * 10;
     const volatility = baseVolatility * sessionMultiplier;
-    
+
     // Trend component with momentum and mean reversion
     const trendComponent = trendDirection * trendStrength * volatility * (0.5 + Math.random() * 0.8);
-    
+
     // Add realistic noise patterns
     const microNoise = (Math.random() - 0.5) * volatility * 0.6;
     const momentumNoise = (Math.random() - 0.5) * volatility * 1.2;
-    
+
     // Occasional spikes (news events, etc.)
     const spikeChance = Math.random();
     let spikeComponent = 0;
     if (spikeChance < 0.003) { // 0.3% chance of spike
       spikeComponent = (Math.random() - 0.5) * volatility * (3 + Math.random() * 4);
     }
-    
+
     const totalChange = trendComponent + microNoise + momentumNoise + spikeComponent + keyLevelReaction;
-    
+
     // Create realistic OHLC with proper market microstructure
     const spreadFactor = 0.4 + Math.random() * 0.8;
     let high, low, close;
-    
+
     if (totalChange > 0) {
       // Bullish candle
       high = open + Math.abs(totalChange) * (1.1 + Math.random() * 0.4) + volatility * spreadFactor;
@@ -410,14 +410,14 @@ function generateDemoMarketData(symbol: string, timeframe: string, limit: number
       low = open - Math.abs(totalChange) * (1.1 + Math.random() * 0.4) - volatility * spreadFactor;
       close = open + totalChange * (0.7 + Math.random() * 0.6);
     }
-    
+
     // Ensure OHLC integrity
     high = Math.max(high, open, close);
     low = Math.min(low, open, close);
-    
+
     // Round to realistic tick sizes
     const roundToTick = (price: number) => Math.round(price / tickSize) * tickSize;
-    
+
     // Realistic volume patterns
     const baseVolume = 45000 + Math.random() * 180000;
     const priceChangeVolume = 1 + Math.abs(totalChange) / volatility * 0.8;
@@ -425,7 +425,7 @@ function generateDemoMarketData(symbol: string, timeframe: string, limit: number
     const spikeVolume = Math.abs(spikeComponent) > 0 ? 2 + Math.random() * 3 : 1;
     const keyLevelVolume = Math.abs(keyLevelReaction) > 0 ? 1.5 + Math.random() * 0.8 : 1;
     const volume = Math.floor(baseVolume * priceChangeVolume * sessionVolume * spikeVolume * keyLevelVolume);
-    
+
     data.push({
       time: Math.floor(time.getTime() / 1000) as UTCTimestamp,
       open: roundToTick(open),
@@ -434,16 +434,16 @@ function generateDemoMarketData(symbol: string, timeframe: string, limit: number
       close: roundToTick(close),
       volume: volume
     });
-    
+
     currentPrice = close;
-    
+
     // Add some price gaps occasionally (weekend gaps, news gaps)
     if (Math.random() < 0.001) { // 0.1% chance of gap
       const gapSize = (Math.random() - 0.5) * volatility * (2 + Math.random() * 3);
       currentPrice += gapSize;
     }
   }
-  
+
   return data;
 }
 
