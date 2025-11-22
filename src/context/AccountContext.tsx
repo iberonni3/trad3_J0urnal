@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import type { TradingAccount, AccountInput } from '@/types/account';
-import { createAccount as supabaseCreateAccount, fetchAccounts } from '@/lib/supabase/accounts';
+import { createAccount as supabaseCreateAccount, fetchAccounts, deleteAccount as supabaseDeleteAccount } from '@/lib/supabase/accounts';
 
 type AccountContextValue = {
   accounts: TradingAccount[];
   selectedAccount: TradingAccount | null;
   selectAccount: (accountId: string) => void;
   createAccount: (input: AccountInput) => Promise<TradingAccount>;
+  deleteAccount: (accountId: string) => Promise<void>;
   refreshAccounts: () => Promise<void>;
   isLoading: boolean;
   error: Error | null;
@@ -97,17 +98,39 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [selectAccount, user],
   );
 
+  const deleteAccount = useCallback(
+    async (accountId: string) => {
+      if (!user) throw new Error('User not authenticated');
+      await supabaseDeleteAccount(user.id, accountId);
+      setAccounts((prev) => {
+        const updated = prev.filter((account) => account.id !== accountId);
+        // If we deleted the selected account, select the first remaining one
+        if (selectedAccountId === accountId && updated.length > 0) {
+          selectAccount(updated[0].id);
+        } else if (updated.length === 0) {
+          setSelectedAccountId(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+        return updated;
+      });
+    },
+    [user, selectedAccountId, selectAccount],
+  );
+
   const value = useMemo<AccountContextValue>(
     () => ({
       accounts,
       selectedAccount: accounts.find((account) => account.id === selectedAccountId) ?? null,
       selectAccount,
       createAccount,
+      deleteAccount,
       refreshAccounts: loadAccounts,
       isLoading: isLoading || authLoading,
       error,
     }),
-    [accounts, selectedAccountId, selectAccount, createAccount, loadAccounts, isLoading, authLoading, error],
+    [accounts, selectedAccountId, selectAccount, createAccount, deleteAccount, loadAccounts, isLoading, authLoading, error],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;

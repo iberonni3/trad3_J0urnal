@@ -183,16 +183,16 @@ export function AppSidebar() {
         <div className="flex items-center gap-3 w-full">
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              {user?.displayName?.[0] || 'U'}
+              {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <div className="font-medium text-sm text-sidebar-foreground truncate">
-                {user?.displayName || 'User'}
+                {user?.displayName || user?.email?.split('@')[0] || 'User'}
               </div>
               <div className="text-xs text-sidebar-foreground/60 truncate">
-                {user?.email || 'user@example.com'}
+                {user?.email || 'No email'}
               </div>
             </div>
           )}

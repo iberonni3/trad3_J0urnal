@@ -7,11 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useAccount } from '@/context/AccountContext';
 import { formatCurrency } from '@/lib/calculations';
-import { PlusCircle, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, CheckCircle2, Trash2 } from 'lucide-react';
 
 export default function Accounts() {
   const navigate = useNavigate();
-  const { accounts, selectedAccount, selectAccount, createAccount, isLoading, error } = useAccount();
+  const { accounts, selectedAccount, selectAccount, createAccount, deleteAccount, isLoading, error } = useAccount();
   const [formState, setFormState] = useState({
     name: '',
     broker: '',
@@ -19,6 +19,7 @@ export default function Accounts() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
 
   const resetForm = () => {
     setFormState({ name: '', broker: '', initialBalance: '' });
@@ -57,6 +58,22 @@ export default function Accounts() {
       setFormError(err instanceof Error ? err.message : 'Failed to create account.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (accountId: string, accountName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${accountName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingAccountId(accountId);
+      await deleteAccount(accountId);
+    } catch (err) {
+      console.error('Error deleting account:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete account.');
+    } finally {
+      setDeletingAccountId(null);
     }
   };
 
@@ -167,11 +184,23 @@ export default function Accounts() {
                           {formatCurrency(account.initialBalance).replace('+', '')}
                         </span>
                       </div>
-                      {!isActive && (
-                        <Button size="sm" variant="outline" onClick={() => selectAccount(account.id)}>
-                          Set as Active
+                      <div className="flex gap-2">
+                        {!isActive && (
+                          <Button size="sm" variant="outline" onClick={() => selectAccount(account.id)} className="flex-1">
+                            Set as Active
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(account.id, account.name)}
+                          disabled={deletingAccountId === account.id}
+                          className={isActive ? 'w-full' : ''}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {deletingAccountId === account.id ? 'Deleting...' : 'Delete'}
                         </Button>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
