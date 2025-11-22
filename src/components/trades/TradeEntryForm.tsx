@@ -194,7 +194,7 @@ export default function TradeEntryForm({
 
   const onFormSubmit = async (data: TradeFormValues) => {
     console.log('Form submission started with data:', data);
-    
+
     const tradeInput: TradeInput = {
       symbol: data.symbol.toUpperCase(),
       direction: data.direction,
@@ -232,7 +232,7 @@ export default function TradeEntryForm({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Basic Information
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="symbol">
@@ -310,7 +310,7 @@ export default function TradeEntryForm({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Price Levels
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="entry">
@@ -321,7 +321,7 @@ export default function TradeEntryForm({
               type="number"
               step="0.00001"
               placeholder="1.08750"
-              {...register('entry', { 
+              {...register('entry', {
                 setValueAs: emptyStringToUndefined
               })}
               className={cn(errors.entry && 'border-destructive')}
@@ -340,7 +340,7 @@ export default function TradeEntryForm({
               type="number"
               step="0.01"
               placeholder="1.00"
-              {...register('quantity', { 
+              {...register('quantity', {
                 setValueAs: emptyStringToUndefined
               })}
               className={cn(errors.quantity && 'border-destructive')}
@@ -359,7 +359,7 @@ export default function TradeEntryForm({
               type="number"
               step="0.00001"
               placeholder="1.08550"
-              {...register('stopLoss', { 
+              {...register('stopLoss', {
                 setValueAs: emptyStringToUndefined
               })}
               className={cn(errors.stopLoss && 'border-destructive')}
@@ -378,7 +378,7 @@ export default function TradeEntryForm({
               type="number"
               step="0.00001"
               placeholder="1.09200"
-              {...register('takeProfit', { 
+              {...register('takeProfit', {
                 setValueAs: emptyStringToUndefined
               })}
               className={cn(errors.takeProfit && 'border-destructive')}
@@ -398,7 +398,7 @@ export default function TradeEntryForm({
                 type="number"
                 step="0.00001"
                 placeholder="1.09200"
-                {...register('exit', { 
+                {...register('exit', {
                   setValueAs: emptyStringToUndefined
                 })}
                 className={cn(errors.exit && 'border-destructive')}
@@ -418,7 +418,7 @@ export default function TradeEntryForm({
               type="number"
               step="0.01"
               placeholder="0.00"
-              {...register('pnl', { 
+              {...register('pnl', {
                 setValueAs: emptyStringToUndefined
               })}
               className={cn(errors.pnl && 'border-destructive')}
@@ -427,8 +427,8 @@ export default function TradeEntryForm({
               <p className="text-sm text-destructive">{errors.pnl.message}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              {status === 'closed' 
-                ? 'Enter your profit or loss for this trade (required for closed trades)' 
+              {status === 'closed'
+                ? 'Enter your profit or loss for this trade (required for closed trades)'
                 : 'Enter unrealized P&L for open trades (optional)'}
             </p>
           </div>
@@ -442,7 +442,7 @@ export default function TradeEntryForm({
               type="number"
               step="0.01"
               placeholder="0.00"
-              {...register('commission', { 
+              {...register('commission', {
                 setValueAs: emptyStringToUndefined
               })}
               className={cn(errors.commission && 'border-destructive')}
@@ -462,7 +462,7 @@ export default function TradeEntryForm({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Timing
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>
@@ -497,10 +497,19 @@ export default function TradeEntryForm({
                     value={openTime ? format(openTime, 'HH:mm') : ''}
                     onChange={(e) => {
                       if (openTime) {
-                        const [hours, minutes] = e.target.value.split(':');
-                        const newDate = new Date(openTime);
-                        newDate.setHours(parseInt(hours), parseInt(minutes));
-                        setValue('openTime', newDate);
+                        const [hoursStr, minutesStr] = e.target.value.split(':');
+                        if (hoursStr && minutesStr) {
+                          const hours = parseInt(hoursStr);
+                          const minutes = parseInt(minutesStr);
+
+                          if (!isNaN(hours) && !isNaN(minutes)) {
+                            const newDate = new Date(openTime);
+                            newDate.setHours(hours, minutes);
+                            if (!isNaN(newDate.getTime())) {
+                              setValue('openTime', newDate);
+                            }
+                          }
+                        }
                       }
                     }}
                     className="mt-1"
@@ -547,10 +556,19 @@ export default function TradeEntryForm({
                       value={closeTime ? format(closeTime, 'HH:mm') : ''}
                       onChange={(e) => {
                         if (closeTime) {
-                          const [hours, minutes] = e.target.value.split(':');
-                          const newDate = new Date(closeTime);
-                          newDate.setHours(parseInt(hours), parseInt(minutes));
-                          setValue('closeTime', newDate);
+                          const [hoursStr, minutesStr] = e.target.value.split(':');
+                          if (hoursStr && minutesStr) {
+                            const hours = parseInt(hoursStr);
+                            const minutes = parseInt(minutesStr);
+
+                            if (!isNaN(hours) && !isNaN(minutes)) {
+                              const newDate = new Date(closeTime);
+                              newDate.setHours(hours, minutes);
+                              if (!isNaN(newDate.getTime())) {
+                                setValue('closeTime', newDate);
+                              }
+                            }
+                          }
                         }
                       }}
                       className="mt-1"
@@ -571,7 +589,7 @@ export default function TradeEntryForm({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Trade Analysis
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="setup">
@@ -614,7 +632,7 @@ export default function TradeEntryForm({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Screenshot
         </h3>
-        
+
         <div className="space-y-2">
           <Label htmlFor="screenshot">Chart Screenshot (Optional)</Label>
           <div className="flex flex-col gap-3">
@@ -676,8 +694,8 @@ export default function TradeEntryForm({
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={isLoading || isSubmitting}
           >
             {(isLoading || isSubmitting) ? (
