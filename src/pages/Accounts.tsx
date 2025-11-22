@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useAccount } from '@/context/AccountContext';
+import { useTrades } from '@/hooks/useTrades';
 import { formatCurrency } from '@/lib/calculations';
 import { PlusCircle, CheckCircle2, Trash2 } from 'lucide-react';
 
 export default function Accounts() {
   const navigate = useNavigate();
   const { accounts, selectedAccount, selectAccount, createAccount, deleteAccount, isLoading, error } = useAccount();
+  const { data: trades = [] } = useTrades();
   const [formState, setFormState] = useState({
     name: '',
     broker: '',
@@ -20,6 +22,26 @@ export default function Accounts() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
+
+  // Calculate current balance for each account
+  const accountBalances = useMemo(() => {
+    const balances: Record<string, number> = {};
+
+    accounts.forEach(account => {
+      // Get all closed trades for this account
+      const accountTrades = trades.filter(
+        trade => trade.accountId === account.id && trade.status === 'closed'
+      );
+
+      // Sum up P&L
+      const totalPnL = accountTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+
+      // Current balance = initial balance + total P&L
+      balances[account.id] = account.initialBalance + totalPnL;
+    });
+
+    return balances;
+  }, [accounts, trades]);
 
   const resetForm = () => {
     setFormState({ name: '', broker: '', initialBalance: '' });
@@ -182,6 +204,20 @@ export default function Accounts() {
                         <span>Initial Balance</span>
                         <span className="font-medium text-foreground">
                           {formatCurrency(account.initialBalance).replace('+', '')}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center justify-between">
+                        <span>Current Balance</span>
+                        <span className={`font-semibold ${accountBalances[account.id] > account.initialBalance
+                            ? 'text-green-600 dark:text-green-500'
+                            : accountBalances[account.id] < account.initialBalance
+                              ? 'text-red-600 dark:text-red-500'
+                              : 'text-foreground'
+                          }`}>
+                          {formatCurrency(accountBalances[account.id] || account.initialBalance).replace('+', '')}
+                          <span className="text-xs ml-1 opacity-70">
+                            ({formatCurrency(accountBalances[account.id] - account.initialBalance)})
+                          </span>
                         </span>
                       </div>
                       <div className="flex gap-2">
