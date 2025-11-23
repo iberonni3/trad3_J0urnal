@@ -5,6 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAccount } from '@/context/AccountContext';
 import { useTrades } from '@/hooks/useTrades';
 import { formatCurrency } from '@/lib/calculations';
@@ -22,6 +32,7 @@ export default function Accounts() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Calculate current balance for each account
   const accountBalances = useMemo(() => {
@@ -83,14 +94,17 @@ export default function Accounts() {
     }
   };
 
-  const handleDelete = async (accountId: string, accountName: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${accountName}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDelete = (accountId: string, accountName: string) => {
+    setAccountToDelete({ id: accountId, name: accountName });
+  };
+
+  const confirmDelete = async () => {
+    if (!accountToDelete) return;
 
     try {
-      setDeletingAccountId(accountId);
-      await deleteAccount(accountId);
+      setDeletingAccountId(accountToDelete.id);
+      await deleteAccount(accountToDelete.id);
+      setAccountToDelete(null);
     } catch (err) {
       console.error('Error deleting account:', err);
       alert(err instanceof Error ? err.message : 'Failed to delete account.');
@@ -209,10 +223,10 @@ export default function Accounts() {
                       <div className="text-sm text-muted-foreground flex items-center justify-between">
                         <span>Current Balance</span>
                         <span className={`font-semibold ${accountBalances[account.id] > account.initialBalance
-                            ? 'text-green-600 dark:text-green-500'
-                            : accountBalances[account.id] < account.initialBalance
-                              ? 'text-red-600 dark:text-red-500'
-                              : 'text-foreground'
+                          ? 'text-green-600 dark:text-green-500'
+                          : accountBalances[account.id] < account.initialBalance
+                            ? 'text-red-600 dark:text-red-500'
+                            : 'text-foreground'
                           }`}>
                           {formatCurrency(accountBalances[account.id] || account.initialBalance).replace('+', '')}
                           <span className="text-xs ml-1 opacity-70">
@@ -245,6 +259,28 @@ export default function Accounts() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!accountToDelete} onOpenChange={(open) => !open && setAccountToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{accountToDelete?.name}"</span>?
+              This action cannot be undone and will permanently remove this account from your records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   BarChart3,
@@ -28,7 +27,7 @@ import {
   TooltipContent
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
 
 const navigationItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home, description: 'Overview & Analytics' },
@@ -50,15 +49,7 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const isCollapsed = state === 'collapsed';
 
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const auth = getAuth();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, [auth]);
+  const { user } = useAuth();
 
   const navItemClasses = (path: string) => {
     const isActive = currentPath.startsWith(path);
@@ -66,6 +57,11 @@ export function AppSidebar() {
       ? 'bg-primary/10 text-primary rounded-md border-l-4 border-primary'
       : 'text-sidebar-foreground hover:bg-sidebar-hover rounded-md';
   };
+
+  // Get user display name and email from Supabase user metadata
+  const userDisplayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User';
+  const userEmail = user?.email || 'No email';
+  const userInitial = user?.user_metadata?.display_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U';
 
   return (
     <Sidebar className={isCollapsed ? 'w-16' : 'w-64'} collapsible="icon">
@@ -178,21 +174,21 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with Firebase User */}
+      {/* Footer with Supabase User */}
       <SidebarFooter className="border-t border-sidebar-border p-3 sm:p-4 flex items-center justify-center">
         <div className="flex items-center gap-3 w-full">
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+              {userInitial}
             </AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <div className="font-medium text-sm text-sidebar-foreground truncate">
-                {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                {userDisplayName}
               </div>
               <div className="text-xs text-sidebar-foreground/60 truncate">
-                {user?.email || 'No email'}
+                {userEmail}
               </div>
             </div>
           )}
