@@ -48,7 +48,7 @@ const uploadImage = async (userId: string, file: File) => {
 
 export const fetchAnalysisEntries = async (userId: string): Promise<AnalysisEntry[]> => {
   const { data, error } = await supabase
-    .from<AnalysisRow>('analysis_entries')
+    .from('analysis_entries')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
@@ -60,11 +60,17 @@ export const fetchAnalysisEntries = async (userId: string): Promise<AnalysisEntr
 export const createAnalysisEntry = async (userId: string, input: AnalysisInput): Promise<AnalysisEntry> => {
   let uploadResult: { url: string; path: string } | null = null;
   if (input.image) {
-    uploadResult = await uploadImage(userId, input.image);
+    try {
+      uploadResult = await uploadImage(userId, input.image);
+    } catch (uploadError) {
+      console.error('❌ Failed to upload analysis image (likely missing bucket):', uploadError);
+      // Proceed without image, but maybe we should warn the caller?
+      // For now, we just log it and save the note without the image.
+    }
   }
 
   const { data, error } = await supabase
-    .from<AnalysisRow>('analysis_entries')
+    .from('analysis_entries')
     .insert({
       user_id: userId,
       title: input.title,

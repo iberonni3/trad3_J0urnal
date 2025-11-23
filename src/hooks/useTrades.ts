@@ -1,4 +1,3 @@
-// ...existing code...
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccount } from '@/context/AccountContext';
@@ -98,7 +97,14 @@ export const useCreateTrade = (onSuccessCallback?: () => void) => {
       try {
         // Create the trade first to get the trade ID
         console.log('Step 1: Creating trade in database...');
-        const tradeId = await createTrade(userId, { ...tradeInput, accountId });
+
+        // Add a timeout to the DB call to prevent indefinite hanging
+        const createPromise = createTrade(userId, { ...tradeInput, accountId });
+        const timeoutPromise = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error('Trade creation timed out')), 15000)
+        );
+
+        const tradeId = await Promise.race([createPromise, timeoutPromise]);
         console.log('✅ Trade created successfully with ID:', tradeId);
 
         // Upload screenshot if provided
