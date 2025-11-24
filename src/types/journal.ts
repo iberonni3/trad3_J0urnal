@@ -22,7 +22,7 @@ export interface JournalEntryRecord {
   updatedAt?: string;
 }
 
-export interface JournalEntryInput extends Omit<JournalEntryRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> { }
+export type JournalEntryInput = Omit<JournalEntryRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 
 export interface JournalLesson {
   id: string;
@@ -40,5 +40,5 @@ export interface JournalLesson {
   updatedAt?: string;
 }
 
-export interface JournalLessonInput extends Omit<JournalLesson, 'id' | 'userId' | 'createdAt' | 'updatedAt'> { }
+export type JournalLessonInput = Omit<JournalLesson, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 
