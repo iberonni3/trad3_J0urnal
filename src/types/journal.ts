@@ -5,6 +5,7 @@ export type LessonImportance = 'high' | 'medium' | 'low' | string;
 export interface JournalEntryRecord {
   id: string;
   userId: string;
+  accountId?: string | null;
   tradeId?: string | null;
   date: string;
   title: string;
@@ -21,7 +22,7 @@ export interface JournalEntryRecord {
   updatedAt?: string;
 }
 
-export interface JournalEntryInput extends Omit<JournalEntryRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> {}
+export interface JournalEntryInput extends Omit<JournalEntryRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> { }
 
 export interface JournalLesson {
   id: string;
@@ -39,5 +40,5 @@ export interface JournalLesson {
   updatedAt?: string;
 }
 
-export interface JournalLessonInput extends Omit<JournalLesson, 'id' | 'userId' | 'createdAt' | 'updatedAt'> {}
+export interface JournalLessonInput extends Omit<JournalLesson, 'id' | 'userId' | 'createdAt' | 'updatedAt'> { }
 

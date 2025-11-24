@@ -9,6 +9,7 @@ import type {
 type JournalEntryRow = {
   id: string;
   user_id: string;
+  account_id?: string | null;
   trade_id: string | null;
   date: string;
   title: string;
@@ -44,6 +45,7 @@ type JournalLessonRow = {
 const mapEntryRow = (row: JournalEntryRow): JournalEntryRecord => ({
   id: row.id,
   userId: row.user_id,
+  accountId: row.account_id,
   tradeId: row.trade_id,
   date: row.date,
   title: row.title,
@@ -76,8 +78,9 @@ const mapLessonRow = (row: JournalLessonRow): JournalLesson => ({
   updatedAt: row.updated_at,
 });
 
-const toEntryInsert = (userId: string, entry: JournalEntryInput) => ({
+const toEntryInsert = (userId: string, entry: JournalEntryInput, accountId?: string | null) => ({
   user_id: userId,
+  account_id: accountId ?? null,
   trade_id: entry.tradeId ?? null,
   date: entry.date,
   title: entry.title,
@@ -144,11 +147,17 @@ const toLessonUpdate = (updates: Partial<JournalLessonInput>) => ({
   updated_at: new Date().toISOString(),
 });
 
-export const fetchJournalEntries = async (userId: string): Promise<JournalEntryRecord[]> => {
-  const { data, error } = await supabase
-    .from<JournalEntryRow>('journal_entries')
+export const fetchJournalEntries = async (userId: string, accountId?: string | null): Promise<JournalEntryRecord[]> => {
+  let query = supabase
+    .from('journal_entries')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', userId);
+
+  if (accountId) {
+    query = query.or(`account_id.eq.${accountId},account_id.is.null`);
+  }
+
+  const { data, error } = await query
     .order('date', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -165,10 +174,11 @@ export const fetchJournalEntries = async (userId: string): Promise<JournalEntryR
 export const createJournalEntry = async (
   userId: string,
   entry: JournalEntryInput,
+  accountId?: string | null,
 ): Promise<JournalEntryRecord> => {
   const { data, error } = await supabase
-    .from<JournalEntryRow>('journal_entries')
-    .insert(toEntryInsert(userId, entry))
+    .from('journal_entries')
+    .insert(toEntryInsert(userId, entry, accountId))
     .select()
     .single();
 
@@ -189,7 +199,7 @@ export const updateJournalEntry = async (
   updates: Partial<JournalEntryInput>,
 ): Promise<JournalEntryRecord> => {
   const { data, error } = await supabase
-    .from<JournalEntryRow>('journal_entries')
+    .from('journal_entries')
     .update(toEntryUpdate(updates))
     .eq('id', entryId)
     .eq('user_id', userId)
@@ -224,7 +234,7 @@ export const deleteJournalEntry = async (userId: string, entryId: string) => {
 
 export const fetchJournalLessons = async (userId: string): Promise<JournalLesson[]> => {
   const { data, error } = await supabase
-    .from<JournalLessonRow>('journal_lessons')
+    .from('journal_lessons')
     .select('*')
     .eq('user_id', userId)
     .order('date_added', { ascending: false })
@@ -245,7 +255,7 @@ export const createJournalLesson = async (
   lesson: JournalLessonInput,
 ): Promise<JournalLesson> => {
   const { data, error } = await supabase
-    .from<JournalLessonRow>('journal_lessons')
+    .from('journal_lessons')
     .insert(toLessonInsert(userId, lesson))
     .select()
     .single();
@@ -267,7 +277,7 @@ export const updateJournalLesson = async (
   updates: Partial<JournalLessonInput>,
 ): Promise<JournalLesson> => {
   const { data, error } = await supabase
-    .from<JournalLessonRow>('journal_lessons')
+    .from('journal_lessons')
     .update(toLessonUpdate(updates))
     .eq('id', lessonId)
     .eq('user_id', userId)
