@@ -165,7 +165,7 @@ export const fetchJournalEntries = async (userId: string, accountId?: string | n
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_entries');
     }
-    throw error;
+    throw new Error(error.message);
   }
 
   return (data ?? []).map(mapEntryRow);
@@ -186,7 +186,7 @@ export const createJournalEntry = async (
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_entries');
     }
-    throw error;
+    throw new Error(error.message);
   }
   if (!data) throw new Error('Failed to create journal entry');
 
@@ -210,7 +210,7 @@ export const updateJournalEntry = async (
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_entries');
     }
-    throw error;
+    throw new Error(error.message);
   }
   if (!data) throw new Error('Failed to update journal entry');
 
@@ -228,7 +228,7 @@ export const deleteJournalEntry = async (userId: string, entryId: string) => {
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_entries');
     }
-    throw error;
+    throw new Error(error.message);
   }
 };
 
@@ -244,7 +244,7 @@ export const fetchJournalLessons = async (userId: string): Promise<JournalLesson
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_lessons');
     }
-    throw error;
+    throw new Error(error.message);
   }
 
   return (data ?? []).map(mapLessonRow);
@@ -264,7 +264,7 @@ export const createJournalLesson = async (
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_lessons');
     }
-    throw error;
+    throw new Error(error.message);
   }
   if (!data) throw new Error('Failed to create lesson');
 
@@ -288,7 +288,7 @@ export const updateJournalLesson = async (
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_lessons');
     }
-    throw error;
+    throw new Error(error.message);
   }
   if (!data) throw new Error('Failed to update lesson');
 
@@ -306,7 +306,7 @@ export const deleteJournalLesson = async (userId: string, lessonId: string) => {
     if (isMissingTableError(error)) {
       throw createMissingTableError('journal_lessons');
     }
-    throw error;
+    throw new Error(error.message);
   }
 };
 
